@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springkernel.org/dtd/spring-beans.dtd">
+
+<beans>
+
+	<bean id="org.sakaiproject.email.api.DigestService"
+			class="org.sakaiproject.email.impl.DbDigestService"
+			init-method="init"
+			destroy-method="destroy"
+			singleton="true">
+		<property name="timeService"><ref bean="org.sakaiproject.time.api.TimeService"/></property>
+		<property name="serverConfigurationService"><ref bean="org.sakaiproject.component.api.ServerConfigurationService"/></property>
+		<property name="emailService"><ref bean="org.sakaiproject..email.api.EmailService"/></property>
+		<property name="eventTrackingService"><ref bean="org.sakaiproject.event.api.EventTrackingService"/></property>
+		<property name="securityService"><ref bean="org.sakaiproject.authz.api.SecurityService"/></property>
+		<property name="userDirectoryService"><ref bean="org.sakaiproject.user.api.UserDirectoryService"/></property>
+		<property name="sessionManager"><ref bean="org.sakaiproject.webapp.api.SessionManager"/></property>
+		<property name="sqlService"><ref bean="org.sakaiproject.db.api.SqlService"/></property>
+ 		<property name="tableName"><value>SAKAI_DIGEST</value></property>
+ 		<property name="locksInDb"><value>false</value></property>
+ 		<property name="autoDdl"><value>${auto.ddl}</value></property>
+	</bean>
+
+	<bean id="org.sakaiproject.email.api.EmailService"
+			class="org.sakaiproject.email.impl.BasicEmailService"
+			init-method="init"
+			destroy-method="destroy"
+			singleton="true">
+		<property name="smtp"><null/></property>
+		<property name="smtpPort"><null/></property>
+		<property name="smtpFrom"><null/></property>
+		<property name="serverConfigurationService"><ref bean="org.sakaiproject.component.api.ServerConfigurationService"/></property>
+	</bean>
+
+	<!-- for testing email - comment out the BasicEmailService and use this	
+	<bean id="org.sakaiproject.service.framework.email.EmailService"
+			class="org.sakaiproject.component.framework.email.TestEmailService"
+			init-method="init"
+			destroy-method="destroy"
+			singleton="true">
+		<property name="smtp"><null/></property>
+		<property name="smtpPort"><null/></property>
+		<property name="smtpFrom"><null/></property>
+		<property name="serverConfigurationService"><ref bean="org.sakaiproject.component.api.ServerConfigurationService"/></property>
+	</bean>
+	-->
+
+</beans>
