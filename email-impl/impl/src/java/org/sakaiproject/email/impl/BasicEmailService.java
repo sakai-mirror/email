@@ -46,7 +46,7 @@ import org.sakaiproject.email.api.EmailService;
  * BasicEmailService implements the EmailService.
  * </p>
  */
-public class BasicEmailService implements EmailService
+public abstract class BasicEmailService implements EmailService
 {
 	/** Our logger. */
 	private static Log M_log = LogFactory.getLog(BasicEmailService.class);
@@ -62,22 +62,17 @@ public class BasicEmailService implements EmailService
 	protected static final String CONTENT_TYPE = "text/plain";
 
 	/**********************************************************************************************************************************************************************************************************************************************************
-	 * Dependencies and their setter methods Note: keep these in sync with the TestEmailService, to make switching between them easier -ggolden
+	 * Dependencies  Note: keep these in sync with the TestEmailService, to make switching between them easier -ggolden
 	 *********************************************************************************************************************************************************************************************************************************************************/
 
-	/** Dependency: ServerConfigurationService. */
-	protected ServerConfigurationService m_serverConfigurationService = null;
-
 	/**
-	 * Dependency: ServerConfigurationService.
-	 * 
-	 * @param service
-	 *        The ServerConfigurationService.
+	 * @return the ServerConfigurationService collaborator.
 	 */
-	public void setServerConfigurationService(ServerConfigurationService service)
-	{
-		m_serverConfigurationService = service;
-	}
+	protected abstract ServerConfigurationService serverConfigurationService();
+
+	/**********************************************************************************************************************************************************************************************************************************************************
+	 * Configuration  Note: keep these in sync with the TestEmailService, to make switching between them easier -ggolden
+	 *********************************************************************************************************************************************************************************************************************************************************/
 
 	/** Configuration: smtp server to use. */
 	protected String m_smtp = null;
@@ -133,7 +128,7 @@ public class BasicEmailService implements EmailService
 		// if no m_mailfrom set, set to the postmaster
 		if (m_smtpFrom == null)
 		{
-			m_smtpFrom = POSTMASTER + "@" + m_serverConfigurationService.getServerName();
+			m_smtpFrom = POSTMASTER + "@" + serverConfigurationService().getServerName();
 		}
 
 		// promote these to the system properties, to keep others (James) from messing with them
