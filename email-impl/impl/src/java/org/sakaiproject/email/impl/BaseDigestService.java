@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.component.api.ServerConfigurationService;
+import org.sakaiproject.component.cover.ComponentManager;
 import org.sakaiproject.email.api.Digest;
 import org.sakaiproject.email.api.DigestEdit;
 import org.sakaiproject.email.api.DigestMessage;
@@ -135,6 +136,10 @@ public abstract class BaseDigestService implements DigestService, StorageUser, R
 	 */
 	public void run()
 	{
+		// since we might be running while the component manager is still being created and populated, such as at server
+		// startup, wait here for a complete component manager
+		ComponentManager.getInstance();
+
 		// loop till told to stop
 		while ((!m_threadStop) && (!Thread.currentThread().isInterrupted()))
 		{
