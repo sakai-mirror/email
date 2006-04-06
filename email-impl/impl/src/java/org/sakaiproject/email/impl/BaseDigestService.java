@@ -138,7 +138,7 @@ public abstract class BaseDigestService implements DigestService, StorageUser, R
 	{
 		// since we might be running while the component manager is still being created and populated, such as at server
 		// startup, wait here for a complete component manager
-		ComponentManager.getInstance();
+		ComponentManager.waitTillConfigured();
 
 		// loop till told to stop
 		while ((!m_threadStop) && (!Thread.currentThread().isInterrupted()))
