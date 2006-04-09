@@ -23,6 +23,7 @@
  		<property name="autoDdl"><value>${auto.ddl}</value></property>
 	</bean>
 
+	<!--
 	<bean id="org.sakaiproject.email.api.EmailService"
 			class="org.sakaiproject.email.impl.BasicEmailService"
 			init-method="init"
@@ -35,10 +36,11 @@
 		<property name="smtpPort"><null/></property>
 		<property name="smtpFrom"><null/></property>
 	</bean>
+	-->
 
-	<!-- for testing email - comment out the BasicEmailService and use this	
-	<bean id="org.sakaiproject.service.framework.email.EmailService"
-			class="org.sakaiproject.component.framework.email.TestEmailService"
+	<!-- for testing email - comment out the BasicEmailService and use this	-->
+	<bean id="org.sakaiproject.email.api.EmailService"
+			class="org.sakaiproject.email.impl.TestEmailService"
 			init-method="init"
 			destroy-method="destroy"
 			singleton="true">
@@ -49,6 +51,6 @@
 		<property name="smtpPort"><null/></property>
 		<property name="smtpFrom"><null/></property>
 	</bean>
-	-->
+	<!-- -->
 
 </beans>
