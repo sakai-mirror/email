@@ -116,6 +116,20 @@ public abstract class BasicEmailService implements EmailService
 		m_smtpFrom = value;
 	}
 
+	/** Configuration: set to go into test mode, where mail is not really sent out. */
+	protected boolean m_testMode = false;
+
+	/**
+	 * Configuration: set test mode.
+	 * 
+	 * @param value
+	 *        The test mode value
+	 */
+	public void setTestMode(boolean value)
+	{
+		m_testMode = value;
+	}
+
 	/**********************************************************************************************************************************************************************************************************************************************************
 	 * Init and Destroy
 	 *********************************************************************************************************************************************************************************************************************************************************/
@@ -136,7 +150,7 @@ public abstract class BasicEmailService implements EmailService
 		if (m_smtpPort != null) System.setProperty(SMTP_PORT, m_smtpPort);
 		System.setProperty(SMTP_FROM, m_smtpFrom);
 
-		M_log.info("init(): smtp: " + m_smtp + ((m_smtpPort != null) ? (":" + m_smtpPort) : "") + " bounces to: " + m_smtpFrom);
+		M_log.info("init(): smtp: " + m_smtp + ((m_smtpPort != null) ? (":" + m_smtpPort) : "") + " bounces to: " + m_smtpFrom + " testMode: " + m_testMode);
 	}
 
 	/**
@@ -157,6 +171,13 @@ public abstract class BasicEmailService implements EmailService
 	public void sendMail(InternetAddress from, InternetAddress[] to, String subject, String content, InternetAddress[] headerTo,
 			InternetAddress[] replyTo, List additionalHeaders)
 	{
+		// if in test mode, use the test method
+		if (m_testMode)
+		{
+			testSendMail(from, to, subject, content, headerTo, replyTo, additionalHeaders);
+			return;
+		}
+
 		if (m_smtp == null)
 		{
 			M_log.warn("sendMail: smtp not set");
@@ -370,6 +391,13 @@ public abstract class BasicEmailService implements EmailService
 	public void send(String fromStr, String toStr, String subject, String content, String headerToStr, String replyToStr,
 			List additionalHeaders)
 	{
+		// if in test mode, use the test method
+		if (m_testMode)
+		{
+			testSend(fromStr, toStr, subject, content, headerToStr, replyToStr, additionalHeaders);
+			return;
+		}
+
 		if (fromStr == null)
 		{
 			M_log.warn("send: null fromStr");
@@ -427,6 +455,54 @@ public abstract class BasicEmailService implements EmailService
 		}
 	}
 
+	protected String listToStr(List list)
+	{
+		if (list == null) return "";
+		return arrayToStr(list.toArray());
+	}
+
+	protected String arrayToStr(Object[] array)
+	{
+		StringBuffer buf = new StringBuffer();
+		if (array != null)
+		{
+			buf.append("[");
+			for (int i = 0; i < array.length; i++)
+			{
+				if (i != 0) buf.append(", ");
+				buf.append(array[i].toString());
+			}
+			buf.append("]");
+		}
+		else
+		{
+			buf.append("");
+		}
+
+		return buf.toString();
+	}
+
+	/**
+	 * test version of sendMail
+	 */
+	protected void testSendMail(InternetAddress from, InternetAddress[] to, String subject, String content, InternetAddress[] headerTo,
+			InternetAddress[] replyTo, List additionalHeaders)
+	{
+		M_log.info("sendMail: from: " + from + " to: " + arrayToStr(to) + " subject: " + subject + " headerTo: "
+				+ arrayToStr(headerTo) + " replyTo: " + arrayToStr(replyTo) + " content: " + content + " additionalHeaders: "
+				+ listToStr(additionalHeaders));
+	}
+
+	/**
+	 * test version of send
+	 */
+	protected void testSend(String fromStr, String toStr, String subject, String content, String headerToStr, String replyToStr,
+			List additionalHeaders)
+	{
+		M_log.info("send: from: " + fromStr + " to: " + toStr + " subject: " + subject + " headerTo: " + headerToStr + " replyTo: "
+				+ replyToStr + " content: " + content + " additionalHeaders: " + listToStr(additionalHeaders));
+	}
+	
 	// inspired by http://java.sun.com/products/javamail/FAQ.html#msgid
 	protected class MyMessage extends MimeMessage
 	{
