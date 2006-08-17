@@ -22,14 +22,18 @@
 package org.sakaiproject.email.impl;
 
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
+import java.util.Vector;
 
+import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
+import javax.mail.SendFailedException;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.AddressException;
@@ -40,6 +44,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.email.api.EmailService;
+import org.sakaiproject.user.api.User;
 
 /**
  * <p>
@@ -53,16 +58,30 @@ public abstract class BasicEmailService implements EmailService
 
 	protected static final String POSTMASTER = "postmaster";
 
+	/** As defined in the com.sun.mail.smtp part of javamail. */
+
+	/** The SMTP server to connect to. */
 	protected static final String SMTP_HOST = "mail.smtp.host";
 
+	/** The SMTP server port to connect to, if the connect() method doesn't explicitly specify one. Defaults to 25. */
 	protected static final String SMTP_PORT = "mail.smtp.port";
 
+	/** Email address to use for SMTP MAIL command. This sets the envelope return address. Defaults to msg.getFrom() or InternetAddress.getLocalAddress(). NOTE: mail.smtp.user was previously used for this. */
 	protected static final String SMTP_FROM = "mail.smtp.from";
+
+	/**
+	 * If set to true, and a message has some valid and some invalid addresses, send the message anyway, reporting the partial failure with a SendFailedException. If set to false (the default), the message is not sent to any of the recipients if there is
+	 * an invalid recipient address.
+	 */
+	protected static final String SMTP_SENDPARTIAL = "mail.smtp.sendpartial";
 
 	protected static final String CONTENT_TYPE = "text/plain";
 
+	/** Protocol name for smtp. */
+	protected static final String SMTP_PROTOCOL = "smtp";
+
 	/**********************************************************************************************************************************************************************************************************************************************************
-	 * Dependencies  Note: keep these in sync with the TestEmailService, to make switching between them easier -ggolden
+	 * Dependencies Note: keep these in sync with the TestEmailService, to make switching between them easier -ggolden
 	 *********************************************************************************************************************************************************************************************************************************************************/
 
 	/**
@@ -71,7 +90,7 @@ public abstract class BasicEmailService implements EmailService
 	protected abstract ServerConfigurationService serverConfigurationService();
 
 	/**********************************************************************************************************************************************************************************************************************************************************
-	 * Configuration  Note: keep these in sync with the TestEmailService, to make switching between them easier -ggolden
+	 * Configuration Note: keep these in sync with the TestEmailService, to make switching between them easier -ggolden
 	 *********************************************************************************************************************************************************************************************************************************************************/
 
 	/** Configuration: smtp server to use. */
@@ -150,7 +169,8 @@ public abstract class BasicEmailService implements EmailService
 		if (m_smtpPort != null) System.setProperty(SMTP_PORT, m_smtpPort);
 		System.setProperty(SMTP_FROM, m_smtpFrom);
 
-		M_log.info("init(): smtp: " + m_smtp + ((m_smtpPort != null) ? (":" + m_smtpPort) : "") + " bounces to: " + m_smtpFrom + " testMode: " + m_testMode);
+		M_log.info("init(): smtp: " + m_smtp + ((m_smtpPort != null) ? (":" + m_smtpPort) : "") + " bounces to: " + m_smtpFrom
+				+ " testMode: " + m_testMode);
 	}
 
 	/**
@@ -171,6 +191,10 @@ public abstract class BasicEmailService implements EmailService
 	public void sendMail(InternetAddress from, InternetAddress[] to, String subject, String content, InternetAddress[] headerTo,
 			InternetAddress[] replyTo, List additionalHeaders)
 	{
+		// some timing for debug
+		long start = 0;
+		if (M_log.isDebugEnabled()) start = System.currentTimeMillis();
+
 		// if in test mode, use the test method
 		if (m_testMode)
 		{
@@ -217,31 +241,6 @@ public abstract class BasicEmailService implements EmailService
 		props.put(SMTP_FROM, m_smtpFrom);
 
 		Session session = Session.getDefaultInstance(props, null);
-
-		if (M_log.isInfoEnabled())
-		{
-			StringBuffer buf = new StringBuffer();
-			buf.append("Email.sendMail: from: ");
-			buf.append(from);
-			buf.append(" subject: ");
-			buf.append(subject);
-			buf.append(" to:");
-			for (int i = 0; i < to.length; i++)
-			{
-				buf.append(" ");
-				buf.append(to[i]);
-			}
-			if (headerTo != null)
-			{
-				buf.append(" headerTo:");
-				for (int i = 0; i < headerTo.length; i++)
-				{
-					buf.append(" ");
-					buf.append(headerTo[i]);
-				}
-			}
-			M_log.info(buf.toString());
-		}
 
 		try
 		{
@@ -364,24 +363,51 @@ public abstract class BasicEmailService implements EmailService
 				msg.addHeaderLine(contentType);
 			}
 
+			long preSend = 0;
+			if (M_log.isDebugEnabled()) preSend = System.currentTimeMillis();
+
 			Transport.send(msg, to);
+
+			long end = 0;
+			if (M_log.isDebugEnabled()) end = System.currentTimeMillis();
+
+			if (M_log.isInfoEnabled())
+			{
+				StringBuffer buf = new StringBuffer();
+				buf.append("Email.sendMail: from: ");
+				buf.append(from);
+				buf.append(" subject: ");
+				buf.append(subject);
+				buf.append(" to:");
+				for (int i = 0; i < to.length; i++)
+				{
+					buf.append(" ");
+					buf.append(to[i]);
+				}
+				if (headerTo != null)
+				{
+					buf.append(" headerTo:");
+					for (int i = 0; i < headerTo.length; i++)
+					{
+						buf.append(" ");
+						buf.append(headerTo[i]);
+					}
+				}
+
+				if (M_log.isDebugEnabled())
+				{
+					buf.append(" time: ");
+					buf.append("" + (end - start));
+					buf.append(" in send: ");
+					buf.append("" + (end - preSend));
+				}
+
+				M_log.info(buf.toString());
+			}
 		}
 		catch (MessagingException e)
 		{
-			// System.out.println(e);
-		}
-	}
-
-	/** Returns true if the given content String can be encoded in the given charset */
-	protected static boolean canUseCharset(String content, String charsetName)
-	{
-		try
-		{
-			return Charset.forName(charsetName).newEncoder().canEncode(content);
-		}
-		catch (Exception e)
-		{
-			return false;
+			M_log.warn("Email.sendMail: exception: " + e, e);
 		}
 	}
 
@@ -455,7 +481,141 @@ public abstract class BasicEmailService implements EmailService
 		}
 	}
 
-	protected String listToStr(List list)
+	/**
+	 * {@inheritDoc}
+	 */
+	public void sendToUsers(Collection users, Collection headers, String message)
+	{
+		if (m_testMode)
+		{
+			M_log.info("sendToUsers: users: " + usersToStr(users) + " headers: " + listToStr(headers) + " message:\n" + message);
+			return;
+		}
+
+		// form the list of to: addresses from the users users collection
+		Collection addresses = new Vector();
+		for (Iterator i = users.iterator(); i.hasNext();)
+		{
+			User user = (User) i.next();
+			String email = user.getEmail();
+			if ((email != null) && (email.length() > 0))
+			{
+				try
+				{
+					addresses.add(new InternetAddress(email));
+				}
+				catch (AddressException e)
+				{
+					if (M_log.isDebugEnabled()) M_log.debug("sendToUsers: " + e);
+				}
+			}
+		}
+
+		// if we have none
+		if (addresses.isEmpty()) return;
+
+		Address[] toAddresses = new Address[addresses.size()];
+		int pos = 0;
+		for (Iterator i = addresses.iterator(); i.hasNext();)
+		{
+			toAddresses[pos++] = (Address) i.next();
+		}
+
+		// get a session for our smtp setup, include host, port, reverse-path, and set partial delivery
+		Properties props = new Properties();
+		props.put(SMTP_HOST, m_smtp);
+		if (m_smtpPort != null) props.put(SMTP_PORT, m_smtpPort);
+		props.put(SMTP_FROM, m_smtpFrom);
+		props.put(SMTP_SENDPARTIAL, "true");
+		Session session = Session.getInstance(props);
+
+		// form our Message
+		MimeMessage msg = new MyMessage(session, headers, message);
+
+		// transport the message
+		long time1 = 0;
+		long time2 = 0;
+		long time3 = 0;
+		long time4 = 0;
+		long time5 = 0;
+		long time6 = 0;
+		try
+		{
+			if (M_log.isDebugEnabled()) time1 = System.currentTimeMillis();
+			Transport transport = session.getTransport(SMTP_PROTOCOL);
+
+			if (M_log.isDebugEnabled()) time2 = System.currentTimeMillis();
+			transport.connect();
+
+			if (M_log.isDebugEnabled()) time3 = System.currentTimeMillis();
+			msg.saveChanges();
+
+			if (M_log.isDebugEnabled()) time4 = System.currentTimeMillis();
+			try
+			{
+				transport.sendMessage(msg, toAddresses);
+			}
+			catch (SendFailedException e)
+			{
+				if (M_log.isDebugEnabled()) M_log.debug("sendToUsers: " + e);
+			}
+			catch (MessagingException e)
+			{
+				M_log.warn("sendToUsers: " + e);
+			}
+
+			if (M_log.isDebugEnabled()) time5 = System.currentTimeMillis();
+			transport.close();
+
+			if (M_log.isDebugEnabled()) time6 = System.currentTimeMillis();
+		}
+		catch (MessagingException e)
+		{
+			M_log.warn("sendToUsers:" + e);
+		}
+
+		// log
+		if (M_log.isInfoEnabled())
+		{
+			StringBuffer buf = new StringBuffer();
+			buf.append("sendToUsers: headers[");
+			for (Iterator i = headers.iterator(); i.hasNext();)
+			{
+				String header = (String) i.next();
+				buf.append(" ");
+				buf.append(cleanUp(header));
+			}
+			buf.append("] to[ ");
+			for (int i = 0; i < toAddresses.length; i++)
+			{
+				buf.append(" ");
+				buf.append(toAddresses[i]);
+			}
+			buf.append("]");
+
+			if (M_log.isDebugEnabled())
+			{
+				buf.append(" times[ ");
+				buf.append((time2 - time1) + " " + (time3 - time2) + " " + (time4 - time3) + " " + (time5 - time4) + " "
+						+ (time6 - time5) + " ]");
+			}
+
+			M_log.info(buf.toString());
+		}
+	}
+
+	protected String cleanUp(String str)
+	{
+		StringBuffer buf = new StringBuffer(str);
+		for (int i = 0; i < buf.length(); i++)
+		{
+			if (buf.charAt(i) == '\n' || buf.charAt(i) == '\r') buf.replace(i, i+1, " ");
+		}
+		
+		return buf.toString();
+	}
+
+	protected String listToStr(Collection list)
 	{
 		if (list == null) return "";
 		return arrayToStr(list.toArray());
@@ -482,11 +642,29 @@ public abstract class BasicEmailService implements EmailService
 		return buf.toString();
 	}
 
+	protected String usersToStr(Collection users)
+	{
+		StringBuffer buf = new StringBuffer();
+		buf.append("[");
+		if (users != null)
+		{
+			for (Iterator i = users.iterator(); i.hasNext();)
+			{
+				User user = (User) i.next();
+				buf.append(user.getDisplayName() + "<" + user.getEmail() + "> ");
+			}
+		}
+
+		buf.append("]");
+
+		return buf.toString();
+	}
+
 	/**
 	 * test version of sendMail
 	 */
-	protected void testSendMail(InternetAddress from, InternetAddress[] to, String subject, String content, InternetAddress[] headerTo,
-			InternetAddress[] replyTo, List additionalHeaders)
+	protected void testSendMail(InternetAddress from, InternetAddress[] to, String subject, String content,
+			InternetAddress[] headerTo, InternetAddress[] replyTo, List additionalHeaders)
 	{
 		M_log.info("sendMail: from: " + from + " to: " + arrayToStr(to) + " subject: " + subject + " headerTo: "
 				+ arrayToStr(headerTo) + " replyTo: " + arrayToStr(replyTo) + " content: " + content + " additionalHeaders: "
@@ -502,7 +680,20 @@ public abstract class BasicEmailService implements EmailService
 		M_log.info("send: from: " + fromStr + " to: " + toStr + " subject: " + subject + " headerTo: " + headerToStr + " replyTo: "
 				+ replyToStr + " content: " + content + " additionalHeaders: " + listToStr(additionalHeaders));
 	}
-	
+
+	/** Returns true if the given content String can be encoded in the given charset */
+	protected static boolean canUseCharset(String content, String charsetName)
+	{
+		try
+		{
+			return Charset.forName(charsetName).newEncoder().canEncode(content);
+		}
+		catch (Exception e)
+		{
+			return false;
+		}
+	}
+
 	// inspired by http://java.sun.com/products/javamail/FAQ.html#msgid
 	protected class MyMessage extends MimeMessage
 	{
@@ -512,6 +703,107 @@ public abstract class BasicEmailService implements EmailService
 		{
 			super(session);
 			m_id = id;
+		}
+
+		public MyMessage(Session session, Collection headers, String message)
+		{
+			super(session);
+
+			try
+			{
+				// the FULL content-type header, for example: Content-Type: text/plain; charset=windows-1252; format=flowed
+				String contentType = null;
+
+				// see if we have a message-id: in the headers, or content-type:, otherwise move the headers into the message
+				if (headers != null)
+				{
+					Iterator i = headers.iterator();
+					while (i.hasNext())
+					{
+						String header = (String) i.next();
+
+						if (header.toLowerCase().startsWith("message-id: "))
+						{
+							m_id = header.substring(12);
+						}
+
+						else if (header.toLowerCase().startsWith("content-type: "))
+						{
+							contentType = header;
+						}
+
+						else
+						{
+							try
+							{
+								addHeaderLine(header);
+							}
+							catch (MessagingException e)
+							{
+
+							}
+						}
+					}
+				}
+
+				// make sure we have a date, use now if needed
+				if (getHeader("Date") == null)
+				{
+					setSentDate(new Date(System.currentTimeMillis()));
+				}
+
+				// figure out what charset encoding to use
+				// the character set, for example, windows-1252 or UTF-8
+				String charset = null;
+
+				// first try to use the charset from the forwarded Content-Type header (if there is one).
+				// if that charset doesn't work, try a couple others.
+				if (contentType != null)
+				{
+					// try and extract the charset from the Content-Type header
+					int charsetStart = contentType.toLowerCase().indexOf("charset=");
+					if (charsetStart != -1)
+					{
+						int charsetEnd = contentType.indexOf(";", charsetStart);
+						if (charsetEnd == -1) charsetEnd = contentType.length();
+						charset = contentType.substring(charsetStart + "charset=".length(), charsetEnd).trim();
+					}
+				}
+
+				if (charset != null && canUseCharset(message, charset))
+				{
+					// use the charset from the Content-Type header
+				}
+				else if (canUseCharset(message, "ISO-8859-1"))
+				{
+					if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "ISO-8859-1");
+					charset = "ISO-8859-1";
+				}
+				else if (canUseCharset(message, "windows-1252"))
+				{
+					if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "windows-1252");
+					charset = "windows-1252";
+				}
+				else
+				{
+					// catch-all - UTF-8 should be able to handle anything
+					if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "UTF-8");
+					charset = "UTF-8";
+				}
+
+				// fill in the body of the message
+				setText(message, charset);
+
+				// if we have a full Content-Type header, set it NOW (after setting the body of the message so that format=flowed is preserved)
+				if (contentType != null)
+				{
+					addHeaderLine(contentType);
+				}
+			}
+			catch (MessagingException e)
+			{
+
+			}
 		}
 
 		protected void updateHeaders() throws MessagingException

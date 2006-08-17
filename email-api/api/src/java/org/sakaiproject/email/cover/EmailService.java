@@ -70,4 +70,12 @@ public class EmailService
 
 		service.send(param0, param1, param2, param3, param4, param5, param6);
 	}
+
+	public static void sendToUsers(java.util.Collection users, java.util.Collection headers, java.lang.String message)
+	{
+		org.sakaiproject.email.api.EmailService service = getInstance();
+		if (service == null) return;
+
+		service.sendToUsers(users, headers, message);
+	}
 }

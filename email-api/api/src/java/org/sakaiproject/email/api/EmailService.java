@@ -21,8 +21,10 @@
 
 package org.sakaiproject.email.api;
 
-import javax.mail.internet.InternetAddress;
+import java.util.Collection;
 import java.util.List;
+
+import javax.mail.internet.InternetAddress;
 
 /**
  * <p>
@@ -72,4 +74,16 @@ public interface EmailService
 	 */
 	void send(String fromStr, String toStr, String subject, String content, String headerToStr, String replyToStr,
 			List additionalHeaders);
+
+	/**
+	 * Send a single message to a set of Users.
+	 * 
+	 * @param users
+	 *        Collection (of User) to send the message to (for those with valid email addresses).
+	 * @param headers
+	 *        List (of String, form "name: value") of headers for the message.
+	 * @param message
+	 *        String body of the message.
+	 */
+	void sendToUsers(Collection users, Collection headers, String message);
 }
