@@ -149,6 +149,23 @@ public abstract class BasicEmailService implements EmailService
 		m_testMode = value;
 	}
 
+	/** The max # recipients to include in each message. */
+	protected int m_maxRecipients = 100;
+
+	/**
+	 * Set max # recipients to include in each message.
+	 * 
+	 * @param setting
+	 *        The max # recipients to include in each message. (as an integer string).
+	 */
+	public void setMaxRecipients(String setting)
+	{
+		m_maxRecipients = Integer.parseInt(setting);
+		
+		// validate - if invalid, restore to the default
+		if (m_maxRecipients < 1) m_maxRecipients = 100;
+	}
+
 	/**********************************************************************************************************************************************************************************************************************************************************
 	 * Init and Destroy
 	 *********************************************************************************************************************************************************************************************************************************************************/
@@ -170,6 +187,7 @@ public abstract class BasicEmailService implements EmailService
 		System.setProperty(SMTP_FROM, m_smtpFrom);
 
 		M_log.info("init(): smtp: " + m_smtp + ((m_smtpPort != null) ? (":" + m_smtpPort) : "") + " bounces to: " + m_smtpFrom
+				+ " maxRecipients: " + m_maxRecipients
 				+ " testMode: " + m_testMode);
 	}
 
@@ -493,7 +511,7 @@ public abstract class BasicEmailService implements EmailService
 		}
 
 		// form the list of to: addresses from the users users collection
-		Collection addresses = new Vector();
+		Vector addresses = new Vector();
 		for (Iterator i = users.iterator(); i.hasNext();)
 		{
 			User user = (User) i.next();
@@ -514,11 +532,33 @@ public abstract class BasicEmailService implements EmailService
 		// if we have none
 		if (addresses.isEmpty()) return;
 
-		Address[] toAddresses = new Address[addresses.size()];
-		int pos = 0;
-		for (Iterator i = addresses.iterator(); i.hasNext();)
+		// how many separate messages do we need to send to keep each one at or under m_maxRecipients?
+		int numMessageSets = ((addresses.size() -1) / m_maxRecipients) + 1;
+		
+		// make an array for each and store them all in the collection
+		Collection messageSets = new Vector();
+		int posInAddresses = 0;
+		for (int i = 0; i < numMessageSets; i++)
 		{
-			toAddresses[pos++] = (Address) i.next();
+			// all but the last one are max size
+			int thisSize = m_maxRecipients;
+			if (i == numMessageSets-1)
+			{
+				thisSize = addresses.size() - ((numMessageSets-1) * m_maxRecipients);
+			}
+
+			// size an array
+			Address[] toAddresses = new Address[thisSize];
+			messageSets.add(toAddresses);
+
+			// fill the array
+			int posInToAddresses = 0;
+			while (posInToAddresses < thisSize)
+			{
+				toAddresses[posInToAddresses] = (Address) addresses.elementAt(posInAddresses);
+				posInToAddresses++;
+				posInAddresses++;
+			}
 		}
 
 		// get a session for our smtp setup, include host, port, reverse-path, and set partial delivery
@@ -551,17 +591,24 @@ public abstract class BasicEmailService implements EmailService
 			msg.saveChanges();
 
 			if (M_log.isDebugEnabled()) time4 = System.currentTimeMillis();
-			try
+			
+			// loop the send for each message set
+			for (Iterator i = messageSets.iterator(); i.hasNext();)
 			{
-				transport.sendMessage(msg, toAddresses);
-			}
-			catch (SendFailedException e)
-			{
-				if (M_log.isDebugEnabled()) M_log.debug("sendToUsers: " + e);
-			}
-			catch (MessagingException e)
-			{
-				M_log.warn("sendToUsers: " + e);
+				Address[] toAddresses = (Address[]) i.next();
+
+				try
+				{
+					transport.sendMessage(msg, toAddresses);
+				}
+				catch (SendFailedException e)
+				{
+					if (M_log.isDebugEnabled()) M_log.debug("sendToUsers: " + e);
+				}
+				catch (MessagingException e)
+				{
+					M_log.warn("sendToUsers: " + e);
+				}
 			}
 
 			if (M_log.isDebugEnabled()) time5 = System.currentTimeMillis();
@@ -585,13 +632,18 @@ public abstract class BasicEmailService implements EmailService
 				buf.append(" ");
 				buf.append(cleanUp(header));
 			}
-			buf.append("] to[ ");
-			for (int i = 0; i < toAddresses.length; i++)
-			{
-				buf.append(" ");
-				buf.append(toAddresses[i]);
-			}
 			buf.append("]");
+			for (Iterator i = messageSets.iterator(); i.hasNext();)
+			{
+				Address[] toAddresses = (Address[]) i.next();
+				buf.append(" to[ ");
+				for (int a = 0; a < toAddresses.length; a++)
+				{
+					buf.append(" ");
+					buf.append(toAddresses[a]);
+				}
+				buf.append("]");
+			}
 
 			if (M_log.isDebugEnabled())
 			{
