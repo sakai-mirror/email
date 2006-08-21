@@ -35,6 +35,7 @@
 		<property name="smtpPort"><null/></property>
 		<property name="smtpFrom"><null/></property>
 		<property name="maxRecipients"><value>100</value></property>
+		<property name="oneMessagePerConnection"><value>false</value></property>
 		<property name="testMode"><value>false</value></property>
 	</bean>
 

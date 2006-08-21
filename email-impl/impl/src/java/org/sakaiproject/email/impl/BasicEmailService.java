@@ -161,9 +161,23 @@ public abstract class BasicEmailService implements EmailService
 	public void setMaxRecipients(String setting)
 	{
 		m_maxRecipients = Integer.parseInt(setting);
-		
+
 		// validate - if invalid, restore to the default
 		if (m_maxRecipients < 1) m_maxRecipients = 100;
+	}
+
+	/** Configuration: use a connection to the SMTP for only one message (or not). */
+	protected boolean m_oneMessagePerConnection = false;
+
+	/**
+	 * Configuration: set use a connection to the SMTP for only one message (or not)
+	 * 
+	 * @param value
+	 *        The setting
+	 */
+	public void setOneMessagePerConnection(boolean value)
+	{
+		m_oneMessagePerConnection = value;
 	}
 
 	/**********************************************************************************************************************************************************************************************************************************************************
@@ -187,8 +201,7 @@ public abstract class BasicEmailService implements EmailService
 		System.setProperty(SMTP_FROM, m_smtpFrom);
 
 		M_log.info("init(): smtp: " + m_smtp + ((m_smtpPort != null) ? (":" + m_smtpPort) : "") + " bounces to: " + m_smtpFrom
-				+ " maxRecipients: " + m_maxRecipients
-				+ " testMode: " + m_testMode);
+				+ " maxRecipients: " + m_maxRecipients + " testMode: " + m_testMode);
 	}
 
 	/**
@@ -533,8 +546,8 @@ public abstract class BasicEmailService implements EmailService
 		if (addresses.isEmpty()) return;
 
 		// how many separate messages do we need to send to keep each one at or under m_maxRecipients?
-		int numMessageSets = ((addresses.size() -1) / m_maxRecipients) + 1;
-		
+		int numMessageSets = ((addresses.size() - 1) / m_maxRecipients) + 1;
+
 		// make an array for each and store them all in the collection
 		Collection messageSets = new Vector();
 		int posInAddresses = 0;
@@ -542,9 +555,9 @@ public abstract class BasicEmailService implements EmailService
 		{
 			// all but the last one are max size
 			int thisSize = m_maxRecipients;
-			if (i == numMessageSets-1)
+			if (i == numMessageSets - 1)
 			{
-				thisSize = addresses.size() - ((numMessageSets-1) * m_maxRecipients);
+				thisSize = addresses.size() - ((numMessageSets - 1) * m_maxRecipients);
 			}
 
 			// size an array
@@ -579,19 +592,23 @@ public abstract class BasicEmailService implements EmailService
 		long time4 = 0;
 		long time5 = 0;
 		long time6 = 0;
+		long timeExtraConnect = 0;
+		long timeExtraClose = 0;
+		long timeTmp = 0;
+		int numConnects = 1;
 		try
 		{
 			if (M_log.isDebugEnabled()) time1 = System.currentTimeMillis();
 			Transport transport = session.getTransport(SMTP_PROTOCOL);
 
 			if (M_log.isDebugEnabled()) time2 = System.currentTimeMillis();
-			transport.connect();
-
-			if (M_log.isDebugEnabled()) time3 = System.currentTimeMillis();
 			msg.saveChanges();
 
+			if (M_log.isDebugEnabled()) time3 = System.currentTimeMillis();
+			transport.connect();
+
 			if (M_log.isDebugEnabled()) time4 = System.currentTimeMillis();
-			
+
 			// loop the send for each message set
 			for (Iterator i = messageSets.iterator(); i.hasNext();)
 			{
@@ -600,6 +617,22 @@ public abstract class BasicEmailService implements EmailService
 				try
 				{
 					transport.sendMessage(msg, toAddresses);
+
+					// if we need to use the connection for just one send, and we have more, close and re-open
+					if ((m_oneMessagePerConnection) && (i.hasNext()))
+					{
+						if (M_log.isDebugEnabled()) timeTmp = System.currentTimeMillis();
+						transport.close();
+						if (M_log.isDebugEnabled()) timeExtraClose += (System.currentTimeMillis() - timeTmp);
+
+						if (M_log.isDebugEnabled()) timeTmp = System.currentTimeMillis();
+						transport.connect();
+						if (M_log.isDebugEnabled())
+						{
+							timeExtraConnect += (System.currentTimeMillis() - timeTmp);
+							numConnects++;
+						}
+					}
 				}
 				catch (SendFailedException e)
 				{
@@ -648,8 +681,9 @@ public abstract class BasicEmailService implements EmailService
 			if (M_log.isDebugEnabled())
 			{
 				buf.append(" times[ ");
-				buf.append((time2 - time1) + " " + (time3 - time2) + " " + (time4 - time3) + " " + (time5 - time4) + " "
-						+ (time6 - time5) + " ]");
+				buf.append(" getransport:" + (time2 - time1) + " savechanges:" + (time3 - time2) + " connect(#" + numConnects + "):"
+						+ ((time4 - time3) + timeExtraConnect) + " send:" + (((time5 - time4) - timeExtraConnect) - timeExtraClose)
+						+ " close:" + ((time6 - time5) + timeExtraClose) + " total: " + (time6 - time1) + " ]");
 			}
 
 			M_log.info(buf.toString());
@@ -661,9 +695,9 @@ public abstract class BasicEmailService implements EmailService
 		StringBuffer buf = new StringBuffer(str);
 		for (int i = 0; i < buf.length(); i++)
 		{
-			if (buf.charAt(i) == '\n' || buf.charAt(i) == '\r') buf.replace(i, i+1, " ");
+			if (buf.charAt(i) == '\n' || buf.charAt(i) == '\r') buf.replace(i, i + 1, " ");
 		}
-		
+
 		return buf.toString();
 	}
 
