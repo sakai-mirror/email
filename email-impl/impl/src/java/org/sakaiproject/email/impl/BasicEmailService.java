@@ -517,9 +517,34 @@ public abstract class BasicEmailService implements EmailService
 	 */
 	public void sendToUsers(Collection users, Collection headers, String message)
 	{
+		if (headers == null)
+		{
+			M_log.warn("sendToUsers: null headers");
+			return;
+		}
+
 		if (m_testMode)
 		{
 			M_log.info("sendToUsers: users: " + usersToStr(users) + " headers: " + listToStr(headers) + " message:\n" + message);
+			return;
+		}
+
+		if (m_smtp == null)
+		{
+			M_log.warn("sendToUsers: smtp not set");
+			return;
+		}
+
+
+		if (users == null)
+		{
+			M_log.warn("sendToUsers: null users");
+			return;
+		}
+
+		if (message == null)
+		{
+			M_log.warn("sendToUsers: null message");
 			return;
 		}
 
