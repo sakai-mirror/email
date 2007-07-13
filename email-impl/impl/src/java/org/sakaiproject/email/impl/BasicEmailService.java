@@ -336,11 +336,6 @@ public abstract class BasicEmailService implements EmailService
 				}
 			}
 
-			if ((subject != null) && (msg.getHeader("Subject") == null))
-			{
-				msg.setSubject(subject);
-			}
-
 			if ((replyTo != null) && (msg.getHeader("Reply-To") == null))
 			{
 				msg.setReplyTo(replyTo);
@@ -380,8 +375,16 @@ public abstract class BasicEmailService implements EmailService
 			else
 			{
 				// catch-all - UTF-8 should be able to handle anything
-				if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "UTF-8");
+				if (contentType != null && charset != null) 
+					contentType = contentType.replaceAll(charset, "UTF-8");
+				else
+					contentType += "; charset=UTF-8";
 				charset = "UTF-8";
+			}
+
+			if ((subject != null) && (msg.getHeader("Subject") == null))
+			{
+				msg.setSubject(subject, charset);
 			}
 
 			// fill in the body of the message
@@ -391,6 +394,7 @@ public abstract class BasicEmailService implements EmailService
 			// (after setting the body of the message so that format=flowed is preserved)
 			if (contentType != null)
 			{
+				msg.addHeaderLine("Content-Transfer-Encoding: quoted-printable");
 				msg.addHeaderLine(contentType);
 			}
 
@@ -898,16 +902,24 @@ public abstract class BasicEmailService implements EmailService
 				else
 				{
 					// catch-all - UTF-8 should be able to handle anything
-					if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "UTF-8");
+					if (contentType != null && charset != null) 
+						contentType = contentType.replaceAll(charset, "UTF-8");
+					else
+						contentType += "; charset=UTF-8";
 					charset = "UTF-8";
 				}
 
 				// fill in the body of the message
 				setText(message, charset);
+            
+				// make sure correct charset is used for subject
+				if ( getSubject() != null ) 
+					setSubject(getSubject(), charset); 
 
 				// if we have a full Content-Type header, set it NOW (after setting the body of the message so that format=flowed is preserved)
 				if (contentType != null)
 				{
+					addHeaderLine("Content-Transfer-Encoding: quoted-printable");
 					addHeaderLine(contentType);
 				}
 			}
