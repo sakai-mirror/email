@@ -377,7 +377,7 @@ public abstract class BasicEmailService implements EmailService
 				// catch-all - UTF-8 should be able to handle anything
 				if (contentType != null && charset != null) 
 					contentType = contentType.replaceAll(charset, "UTF-8");
-				else
+				else if (contentType != null)
 					contentType += "; charset=UTF-8";
 				charset = "UTF-8";
 			}
@@ -855,7 +855,7 @@ public abstract class BasicEmailService implements EmailService
 							}
 							catch (MessagingException e)
 							{
-
+								M_log.warn("Email.MyMessage: exception: " + e, e);
 							}
 						}
 					}
@@ -904,8 +904,10 @@ public abstract class BasicEmailService implements EmailService
 					// catch-all - UTF-8 should be able to handle anything
 					if (contentType != null && charset != null) 
 						contentType = contentType.replaceAll(charset, "UTF-8");
-					else
+					else if (contentType != null)
 						contentType += "; charset=UTF-8";
+					else
+						contentType = "Content-Type: text/plain; charset=UTF-8";
 					charset = "UTF-8";
 				}
 
@@ -925,7 +927,7 @@ public abstract class BasicEmailService implements EmailService
 			}
 			catch (MessagingException e)
 			{
-
+				M_log.warn("Email.MyMessage: exception: " + e, e);
 			}
 		}
 
