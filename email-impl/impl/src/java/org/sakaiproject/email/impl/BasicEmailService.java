@@ -921,7 +921,7 @@ public abstract class BasicEmailService implements EmailService
 				// if we have a full Content-Type header, set it NOW (after setting the body of the message so that format=flowed is preserved)
 				if (contentType != null)
 				{
-					addHeaderLine("Content-Transfer-Encoding: quoted-printable");
+					// addHeaderLine("Content-Transfer-Encoding: quoted-printable");
 					addHeaderLine(contentType);
 				}
 			}
