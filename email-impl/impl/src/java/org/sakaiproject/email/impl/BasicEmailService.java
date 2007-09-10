@@ -408,7 +408,7 @@ public abstract class BasicEmailService implements EmailService
 
 			if (M_log.isInfoEnabled())
 			{
-				StringBuffer buf = new StringBuffer();
+				StringBuilder buf = new StringBuilder();
 				buf.append("Email.sendMail: from: ");
 				buf.append(from);
 				buf.append(" subject: ");
@@ -686,7 +686,7 @@ public abstract class BasicEmailService implements EmailService
 		// log
 		if (M_log.isInfoEnabled())
 		{
-			StringBuffer buf = new StringBuffer();
+			StringBuilder buf = new StringBuilder();
 			buf.append("sendToUsers: headers[");
 			for (Iterator i = headers.iterator(); i.hasNext();)
 			{
@@ -721,7 +721,7 @@ public abstract class BasicEmailService implements EmailService
 
 	protected String cleanUp(String str)
 	{
-		StringBuffer buf = new StringBuffer(str);
+		StringBuilder buf = new StringBuilder(str);
 		for (int i = 0; i < buf.length(); i++)
 		{
 			if (buf.charAt(i) == '\n' || buf.charAt(i) == '\r') buf.replace(i, i + 1, " ");
@@ -738,7 +738,7 @@ public abstract class BasicEmailService implements EmailService
 
 	protected String arrayToStr(Object[] array)
 	{
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		if (array != null)
 		{
 			buf.append("[");
@@ -759,7 +759,7 @@ public abstract class BasicEmailService implements EmailService
 
 	protected String usersToStr(Collection users)
 	{
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		buf.append("[");
 		if (users != null)
 		{

@@ -361,7 +361,7 @@ public abstract class BaseDigestService implements DigestService, StorageUser, R
 			String subject = serverConfigurationService().getString("ui.service", "Sakai") + " " + rb.getString("notif") + " "
 					+ period.firstTime().toStringLocalDate();
 
-			StringBuffer body = new StringBuffer();
+			StringBuilder body = new StringBuilder();
 			body.append(subject);
 			body.append("\n\n");
 
