@@ -1,52 +1,45 @@
 package org.sakaiproject.email.api;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Type safe constant for message mime types
- */
-enum MimeType
-{
-	TEXT("text/plain"), HTML("text/html");
-
-	private String mimeString;
-
-	public MimeType(String mimeString)
-	{
-		this.mimeString = mimeString;
-	}
-
-	public String getMimeString()
-	{
-		return mimeString;
-	}
-}
-
-/**
- * Type safe constant for recipient types
- */
-enum RecipientType
-{
-	TO, CC, BCC
-}
+import org.sakaiproject.email.api.EmailAddress.RecipientType;
 
 /**
  * Value object for sending emails. Mimics javax.mail.internet.MimeMessage without having a
- * dependency on javax.mail
+ * dependency on javax.mail<br>
+ * 
+ * <p>Sending a message can be done by specifying recipients and/or <em>actual</em> recipients.  If
+ * only recipients (to, cc, bcc) are specified, those are the people that will recieve the message
+ * and will see each other listed in the to, cc and bcc fields.  If actual recipients are specified,
+ * any other recipients will be ignored but will be added to the email headers appropriately.  This
+ * allows for mailing to lists and hiding recipients (recipients: mylist@somedomain.edu,
+ * actualRecipients: [long list of students].</p>
+ * 
+ * <p>The default content type for a message is {@link ContentType#TEXT}.
+ * 
+ * <p>The default character set for a message is UTF-8.
+ * 
+ * @see javax.mail.Transport#send(MimeMessage)
+ * @see javax.mail.Transport#send(MimeMessage, Address[])
+ * @see javax.mail.internet.InternetAddress
  */
 public class EmailMessage
 {
+	/**
+	 * Type safe constant for message mime types
+	 */
 	// who this message is from
 	private EmailAddress from;
 
 	// addressee for replies
-	private EmailAddress replyTo;
+	private List<EmailAddress> replyTo;
 
 	// recipients of message
-	private List<EmailAddress> recipients;
+	private Map<RecipientType, List<EmailAddress>> recipients;
 
 	// subject of message
 	private String subject;
@@ -55,22 +48,19 @@ public class EmailMessage
 	private String body;
 
 	// attachments to consider for message
-	private List<File> attachments;
+	private Attachments attachments;
 
 	// arbitrary headers for message
 	private HashMap<String, String> headers;
 
 	// mime type of message
-	private String mimeType;
+	private String contentType = ContentTypes.TEXT;
 
 	// character set of text in message
 	private String charset;
 
-	// whether to embed attachments to message or persist to resource store
-	private boolean embedAttachments;
-
-	// where to put files in the resource store.  Only used if embedAttachments == true.
-	private String embedLocation;
+	// format of this message.  common value is "flowed"
+	private String format;
 
 	/**
 	 * Default constructor.
@@ -105,7 +95,7 @@ public class EmailMessage
 	 */
 	public void setFrom(String email)
 	{
-		this.from = new EmailAddress(from);
+		this.from = new EmailAddress(email);
 	}
 
 	/**
@@ -124,7 +114,7 @@ public class EmailMessage
 	 * 
 	 * @return {@link EmailAddress} of reply to recipient.
 	 */
-	public EmailAddress getReplyTo()
+	public List<EmailAddress> getReplyTo()
 	{
 		return replyTo;
 	}
@@ -135,9 +125,11 @@ public class EmailMessage
 	 * @param email
 	 *            Email string of reply to recipient.
 	 */
-	public void setReplyTo(String email)
+	public void addReplyTo(EmailAddress emailAddress)
 	{
-		replyTo = new EmailAddress(email);
+		if (replyTo == null)
+			replyTo = new ArrayList<EmailAddress>();
+		replyTo.add(emailAddress);
 	}
 
 	/**
@@ -146,7 +138,7 @@ public class EmailMessage
 	 * @param email
 	 *            {@link EmailAddress} of reply to recipient.
 	 */
-	public void setReplyTo(EmailAddress replyTo)
+	public void setReplyTo(List<EmailAddress> replyTo)
 	{
 		this.replyTo = replyTo;
 	}
@@ -156,9 +148,24 @@ public class EmailMessage
 	 * 
 	 * @return List of {@link EmailAddress} that will receive this messagel
 	 */
-	public List<EmailAddress> getRecipients()
+	public Map<RecipientType, List<EmailAddress>> getRecipients()
 	{
 		return recipients;
+	}
+
+	/**
+	 * Get recipients of this message that are associated to a certain type
+	 * 
+	 * @param type
+	 * @return
+	 * @see RecipientType
+	 */
+	public List<EmailAddress> getRecipients(RecipientType type)
+	{
+		List<EmailAddress> retval = null;
+		if (recipients != null)
+			recipients.get(type);
+		return retval;
 	}
 
 	/**
@@ -232,6 +239,41 @@ public class EmailMessage
 	}
 
 	/**
+	 * Set the recipients of this messsage. This will replace any existing recipients
+	 * 
+	 * @param recipients
+	 */
+	public void setRecipients(Map<RecipientType, List<EmailAddress>> recipients)
+	{
+		this.recipients = recipients;
+	}
+
+	/**
+	 * Get all recipients as a flattened list. This is intended to be used for determining the
+	 * recipients for an SMTP route.
+	 * 
+	 * @return list of recipient addresses associated to this message
+	 */
+	public List<EmailAddress> getAllRecipients()
+	{
+		List<EmailAddress> rcpts = new ArrayList<EmailAddress>();
+
+		if (recipients.containsKey(RecipientType.TO))
+			rcpts.addAll(recipients.get(RecipientType.TO));
+
+		if (recipients.containsKey(RecipientType.CC))
+			rcpts.addAll(recipients.get(RecipientType.CC));
+
+		if (recipients.containsKey(RecipientType.BCC))
+			rcpts.addAll(recipients.get(RecipientType.BCC));
+
+		if (recipients.containsKey(RecipientType.ACTUAL))
+			rcpts.addAll(recipients.get(RecipientType.ACTUAL));
+
+		return rcpts;
+	}
+
+	/**
 	 * Get the subject of this message.
 	 * 
 	 * @return The subject of this message. May be empty or null value.
@@ -276,9 +318,9 @@ public class EmailMessage
 	/**
 	 * Get the attachments on this message
 	 * 
-	 * @return List of {@link java.io.File} attached to this message.
+	 * @return List of {@link Attachments} attached to this message.
 	 */
-	public List<File> getAttachments()
+	public Attachments getAttachments()
 	{
 		return attachments;
 	}
@@ -292,7 +334,11 @@ public class EmailMessage
 	public void addAttachment(File attachment)
 	{
 		if (attachment != null)
-			attachments.add(attachment);
+		{
+			if (attachments == null)
+				attachments = new Attachments();
+			attachments.addAttachment(attachment);
+		}
 	}
 
 	/**
@@ -304,7 +350,7 @@ public class EmailMessage
 	 */
 	public void addAttachment(String attachmentUrl)
 	{
-		if (attachment != null)
+		if (attachmentUrl != null)
 		{
 			File f = new File(attachmentUrl);
 			addAttachment(f);
@@ -317,7 +363,7 @@ public class EmailMessage
 	 * @param attachments
 	 *            The attachments to set on this message.
 	 */
-	public void setAttachments(List<File> attachments)
+	public void setAttachments(Attachments attachments)
 	{
 		this.attachments = attachments;
 	}
@@ -333,16 +379,58 @@ public class EmailMessage
 	}
 
 	/**
-	 * Add a header to this message.
+	 * Flattens the headers down to "key: value" strings.
+	 * 
+	 * @return List of properly formatted headers. List will be 0 length if no headers found. Does
+	 *         not return null
+	 */
+	public List<String> extractHeaders()
+	{
+		List<String> retval = new ArrayList<String>();;
+		if (headers != null)
+		{
+			for (String key : headers.keySet())
+			{
+				String value = headers.get(key);
+				if (key != null && value != null)
+				{
+					retval.add(key + ": " + value);
+				}
+			}
+		}
+		return retval;
+	}
+
+	/**
+	 * Remove a header from this message.  Does nothing if header is not found.
+	 * 
+	 * @param key
+	 */
+	public void removeHeader(String key)
+	{
+		if (headers != null && !headers.isEmpty() && headers.containsKey(key))
+			headers.remove(key);
+	}
+
+	/**
+	 * Add a header to this message. If the key is found in the headers of this message, the value
+	 * is appended to the previous value found and separated by a space. A key of null will not be
+	 * added. If value is null, will remove any previous entries of the matching key.
 	 * 
 	 * @param key
 	 *            The key of the header.
 	 * @param value
 	 *            The value of the header.
 	 */
-	public void addHeader(String key, String value)
+	public void setHeader(String key, String value)
 	{
-		headers.put(key, value);
+		if (key != null && value != null)
+		{
+			if (headers == null)
+				headers = new HashMap<String, String>();
+
+			headers.put(key, value);
+		}
 	}
 
 	/**
@@ -359,11 +447,11 @@ public class EmailMessage
 	/**
 	 * Get the mime type of this message.
 	 * 
-	 * @return {@link MimeType} of this message.
+	 * @return {@link org.sakaiproject.email.api.ContentTypes} of this message.
 	 */
-	public MimeType getMimeType()
+	public String getContentType()
 	{
-		return mimeType;
+		return contentType;
 	}
 
 	/**
@@ -371,10 +459,11 @@ public class EmailMessage
 	 * 
 	 * @param mimeType
 	 *            The mime type to use for this message.
+	 * @see org.sakaiproject.email.api.ContentTypes
 	 */
-	public void setMimeType(MimeType mimeType)
+	public void setContentType(String mimeType)
 	{
-		this.mimeType = mimeType;
+		this.contentType = mimeType;
 	}
 
 	/**
@@ -392,33 +481,20 @@ public class EmailMessage
 	 * 
 	 * @param charset
 	 *            The character set used to render text in this message.
+	 * @see org.sakaproject.email.api.CharsetConstants
 	 */
 	public void setCharset(String charset)
 	{
 		this.charset = charset;
 	}
 
-	/**
-	 * Whether to embed attachments on message or to place in a resource store.
-	 * 
-	 * @return true if attachments are included with this message. false if attachments are place in
-	 *         a resource store.
-	 */
-	public boolean isEmbedAttachments()
+	public String getFormat()
 	{
-		return embedAttachment;
+		return format;
 	}
 
-	/**
-	 * Set whether to embed attachments on message or to place in a resource store.
-	 * 
-	 * @param embedAttachments
-	 *            Flag to set embed policy. Should be true if attachments are included with this
-	 *            message. false if attachments are place in a resource store.
-	 */
-	public void setEmbedAttachments(boolean embedAttachments, String embedLocation)
+	public void setFormat(String format)
 	{
-		this.embedAttachments = embedAttachments;
-		this.embedLocation = embedLocation;
+		this.format = format;
 	}
 }
