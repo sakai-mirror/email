@@ -38,7 +38,9 @@ import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -910,16 +912,37 @@ public abstract class BasicEmailService implements EmailService
 						contentType = "Content-Type: text/plain; charset=UTF-8";
 					charset = "UTF-8";
 				}
-
-				// fill in the body of the message
-				setText(message, charset);
+				
+				if (contentType.contains("multipart/")) {
+					MimeMultipart multiPartContent = new MimeMultipart("alternative");
+					int indexOfStartOfBoundary = contentType.indexOf("boundary=\"") + 10;
+					String headerStartingWithBoundary = contentType.substring(indexOfStartOfBoundary);
+					String boundary = headerStartingWithBoundary.substring(0, headerStartingWithBoundary.indexOf("\""));
+					String[] parts = message.split("--" + boundary + "(--)?\n");
+					// the zeroth part is the line about how this is a MIME message, so we won't use it
+					for (int i = 1; i < parts.length - 1; i++) {
+						String[] partLines = parts[i].split("\n");
+						StringBuilder partText = new StringBuilder();
+						for (int j = 1; j < partLines.length; j++) {
+							partText.append(partLines[j] + "\n");
+						}
+						MimeBodyPart bodyPart = new MimeBodyPart();
+						String mimeType = partLines[0].contains("text/html") ? "text/html" : "text/plain";
+						bodyPart.setContent(partText.toString(), mimeType);
+						multiPartContent.addBodyPart(bodyPart);
+					}
+					setContent(multiPartContent);
+				} else {
+					// fill in the body of the message
+					setText(message, charset);
+				}
             
 				// make sure correct charset is used for subject
 				if ( getSubject() != null ) 
 					setSubject(getSubject(), charset); 
 
 				// if we have a full Content-Type header, set it NOW (after setting the body of the message so that format=flowed is preserved)
-				if (contentType != null)
+				if (contentType != null  && !contentType.contains("multipart/"))
 				{
 					// addHeaderLine("Content-Transfer-Encoding: quoted-printable");
 					addHeaderLine(contentType);
