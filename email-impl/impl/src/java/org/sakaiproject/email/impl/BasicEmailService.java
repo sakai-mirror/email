@@ -21,7 +21,7 @@
 
 package org.sakaiproject.email.impl;
 
-import java.io.File;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -52,8 +52,9 @@ import javax.mail.internet.MimeMultipart;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.component.api.ServerConfigurationService;
-import org.sakaiproject.email.api.Attachments;
+import org.sakaiproject.email.api.Attachment;
 import org.sakaiproject.email.api.CharsetConstants;
+import org.sakaiproject.email.api.ContentType;
 import org.sakaiproject.email.api.EmailAddress;
 import org.sakaiproject.email.api.EmailHeaders;
 import org.sakaiproject.email.api.EmailMessage;
@@ -103,6 +104,8 @@ public abstract class BasicEmailService implements EmailService
 	 * @return the ServerConfigurationService collaborator.
 	 */
 	protected abstract ServerConfigurationService serverConfigurationService();
+
+//	protected abstract ContentHostingService contentHostingService();
 
 	/**********************************************************************************************************************************************************************************************************************************************************
 	 * Configuration Note: keep these in sync with the TestEmailService, to make switching between them easier -ggolden
@@ -250,8 +253,8 @@ public abstract class BasicEmailService implements EmailService
 	 * {@inheritDoc}
 	 */
 	public void sendMail(InternetAddress from, InternetAddress[] to, String subject, String content,
-			HashMap<RecipientType, InternetAddress[]> headerTo, InternetAddress[] replyTo,
-			List<String> additionalHeaders, Attachments attachments)
+			Map<RecipientType, InternetAddress[]> headerTo, InternetAddress[] replyTo,
+			List<String> additionalHeaders, List<Attachment> attachments)
 	{
 		// some timing for debug
 		long start = 0;
@@ -306,12 +309,16 @@ public abstract class BasicEmailService implements EmailService
 		{
 			// see if we have a message-id in the additional headers
 			String mid = null;
-			for (String header : additionalHeaders)
+			if (additionalHeaders != null)
 			{
-				if (header.toLowerCase().startsWith(EmailHeaders.MESSAGE_ID.toLowerCase() + ": "))
+				for (String header : additionalHeaders)
 				{
-					// length of 'message-id: ' == 12
-					mid = header.substring(12);
+					if (header.toLowerCase().startsWith(EmailHeaders.MESSAGE_ID.toLowerCase() + ": "))
+					{
+						// length of 'message-id: ' == 12
+						mid = header.substring(12);
+						break;
+					}
 				}
 			}
 
@@ -325,12 +332,15 @@ public abstract class BasicEmailService implements EmailService
 			// set the additional headers on the message
 			// but treat Content-Type specially as we need to check the charset
 			// and we already dealt with the message id
-			for (String header : additionalHeaders)
+			if (additionalHeaders != null)
 			{
-				if (header.toLowerCase().startsWith(EmailHeaders.CONTENT_TYPE.toLowerCase() + ": "))
-					contentType = header;
-				else if (!header.toLowerCase().startsWith(EmailHeaders.MESSAGE_ID.toLowerCase() + ": "))
-					msg.addHeaderLine(header);
+				for (String header : additionalHeaders)
+				{
+					if (header.toLowerCase().startsWith(EmailHeaders.CONTENT_TYPE.toLowerCase() + ": "))
+						contentType = header;
+					else if (!header.toLowerCase().startsWith(EmailHeaders.MESSAGE_ID.toLowerCase() + ": "))
+						msg.addHeaderLine(header);
+				}
 			}
 
 			// date
@@ -385,7 +395,7 @@ public abstract class BasicEmailService implements EmailService
 			if ((subject != null) && (msg.getHeader(EmailHeaders.SUBJECT) == null))
 				msg.setSubject(subject, charset);
 
-			setContent(content, attachments, msg, charset);
+			setContent(content, attachments, msg, contentType, charset);
 
 			// if we have a full Content-Type header, set it NOW
 			// (after setting the body of the message so that format=flowed is preserved)
@@ -710,9 +720,12 @@ public abstract class BasicEmailService implements EmailService
 
 			// build the content type
 			String contentType = EmailHeaders.CONTENT_TYPE + ": " + msg.getContentType();
-			contentType += "; charset=" + msg.getCharset();
+			if (msg.getCharset() != null && msg.getCharset().trim().length() != 0)
+				contentType += "; charset=" + msg.getCharset();
 			if (msg.getFormat() != null && msg.getFormat().trim().length() != 0)
 				contentType += "; format=" + msg.getFormat();
+			// add the content type to the headers
+			headers.add(contentType);
 
 			// send the message
 			sendMail(from, actual, msg.getSubject(), msg.getBody(), headerTo, replyTo, headers, msg
@@ -865,50 +878,184 @@ public abstract class BasicEmailService implements EmailService
 		return buf.toString();
 	}
 
-	protected void setContent(String content, Attachments attachments, MimeMessage msg,
-			String charset) throws MessagingException
+	/**
+	 * Sets the content for a message. Also attaches files to the message.
+	 * 
+	 * TODO: Uncomment and test code that will put attachments into CHS and add links to the
+	 * message.
+	 * 
+	 * @param content
+	 * @param attachments
+	 * @param msg
+	 * @param charset
+	 * @throws MessagingException
+	 */
+	protected void setContent(String content, List<Attachment> attachments, MimeMessage msg,
+			String contentType, String charset) throws MessagingException
 	{
-		if (attachments == null || attachments.getAttachments().size() == 0)
+//		LinkedHashMap<Attachment, String> storedAttachments = new LinkedHashMap<Attachment, String>();
+		ArrayList<MimeBodyPart> embeddedAttachments = new ArrayList<MimeBodyPart>();
+		if (attachments != null && attachments.size() > 0)
 		{
-			msg.setText(content, charset);
+			// Add attachments to messages
+			for (Attachment attachment : attachments)
+			{
+				// if no store location specified, add attachments to message
+//				if (attachment.getStoreLocation() == null)
+//				{
+					// attach the file to the message
+					embeddedAttachments.add(createAttachmentPart(attachment));
+//				}
+//				// use store location to put files into a resource store
+//				else
+//				{
+//					try
+//					{
+//						storedAttachments.put(attachment, storeAttachment(attachment));
+//					}
+//					catch (IdUniquenessException iue) {}
+//					catch (IdLengthException ile) {}
+//					catch (IdInvalidException iie) {}
+//					catch (ServerOverloadException soe) {}
+//					catch (InconsistentException ie) {}
+//					catch (FileNotFoundException fnfe) {}
+//					catch (OverQuotaException oqe) {}
+//					catch (IdUnusedException uune) {}
+//					catch (PermissionException perme) {}
+//				}
+			}
 		}
+
+		// if attachments were stored away from the message, update the content to have links
+		// to the storage location
+//		if (!storedAttachments.isEmpty())
+//		{
+//			// set the line break based on content type
+//			String lineBreak = "\n";
+//			if (ContentType.HTML.equals(msg.getContentType()))
+//				lineBreak = "<br />\n";
+//
+//			// update the content to include links to the externally stored attachments
+//			StringBuffer upContent = new StringBuffer(content);
+//			upContent.append(lineBreak).append(lineBreak);
+//			for (Attachment attachment : storedAttachments.keySet())
+//			{
+//				upContent.append(attachment.getFile().getName()).append(lineBreak);
+//				upContent.append(storedAttachments.get(attachment)).append(lineBreak);
+//			}
+//			content = upContent.toString();
+//		}
+
+		// if no direct attachments, keep the message simple and add the content as text.
+		if (embeddedAttachments.size() == 0)
+		{
+			// if no contentType specified, go with text/plain
+			if (contentType == null)
+				msg.setText(content, charset);
+			else
+				msg.setContent(content, contentType);
+		}
+		// the multipart was constructed (ie. attachments available), use it as the message content
 		else
 		{
-			// if no store location specified, add attachments to message
-			if (attachments.getStoreLocation() == null)
-			{
-				// create a multipart to hold the content and attachments
-				Multipart multipart = new MimeMultipart();
+			// create a multipart container
+			Multipart multipart = new MimeMultipart();
 
-				// fill in the body of the message
-				MimeBodyPart msgBodyPart = new MimeBodyPart();
-				msgBodyPart.setContent(content, charset);
-				multipart.addBodyPart(msgBodyPart);
-
-				// Add attachments to messages
-				for (File attachment : attachments.getAttachments())
-				{
-					FileDataSource source = new FileDataSource(attachment);
-					msgBodyPart = new MimeBodyPart();
-					msgBodyPart.setDataHandler(new DataHandler(source));
-					msgBodyPart.setFileName(attachment.getName());
-					multipart.addBodyPart(msgBodyPart);
-				}
-				msg.setContent(multipart);
-			}
-			// use store location to put files into a resource store
+			// create a body part for the message text
+			MimeBodyPart msgBodyPart = new MimeBodyPart();
+			if (contentType == null)
+				msgBodyPart.setText(content, charset);
 			else
+				msgBodyPart.setContent(content, contentType);
+
+			// add the message part to the container
+			multipart.addBodyPart(msgBodyPart);
+
+			// add attachments
+			for (MimeBodyPart attachPart : embeddedAttachments)
 			{
-				
+				multipart.addBodyPart(attachPart);
 			}
+
+			// set the multipart container as the content of the message
+			msg.setContent(multipart);
 		}
 	}
+
+	/**
+	 * Attaches a file as a body part to the multipart message
+	 * 
+	 * @param multipart
+	 * @param attachment
+	 * @throws MessagingException
+	 */
+	private MimeBodyPart createAttachmentPart(Attachment attachment) throws MessagingException
+	{
+		MimeBodyPart attachPart = new MimeBodyPart();
+		FileDataSource source = new FileDataSource(attachment.getFile());
+		attachPart = new MimeBodyPart();
+		attachPart.setDataHandler(new DataHandler(source));
+		attachPart.setFileName(attachment.getFile().getName());
+		return attachPart;
+//		multipart.addBodyPart(attachPart);
+	}
+
+	/**
+	 * Stores an attachment in the specified store location.
+	 * 
+	 * TODO: Uncomment and test CHS storage
+	 * 
+	 * @param attachment
+	 * @return The full URL where the attachment is stored.
+	 * @throws IdUniquenessException
+	 * @throws IdLengthException
+	 * @throws IdInvalidException
+	 * @throws ServerOverloadException
+	 * @throws InconsistentException
+	 * @throws FileNotFoundException
+	 * @throws OverQuotaException
+	 * @throws IdUnusedException
+	 * @throws PermissionException
+	 */
+//	private String storeAttachment(Attachment attachment) throws IdUniquenessException,
+//		IdLengthException, IdInvalidException, ServerOverloadException, InconsistentException,
+//		FileNotFoundException, OverQuotaException, IdUnusedException, PermissionException 
+//	{
+//		ContentHostingService chs = contentHostingService();
+//		File file = attachment.getFile();
+//		// set the display name
+//		ResourcePropertiesEdit props = chs.newResourceProperties();
+//		String filename = file.getName();
+//		props.addProperty(ResourceProperties.PROP_DISPLAY_NAME, filename);
+//		props.addAll(attachment.getProperties());
+//
+//		// create the resource
+//		String collectionId = attachment.getStoreLocation();
+//		int lastDot = filename.lastIndexOf('.');
+//		String basename = filename.substring(0, lastDot);
+//		String ext = filename.substring(lastDot);
+//		ContentResourceEdit res = chs.addResource(collectionId, basename, ext,
+//				ContentHostingService.MAXIMUM_ATTEMPTS_FOR_UNIQUENESS);
+//		res.setContent(new FileInputStream(file));
+//
+//		// set the resource/content type
+//		String type = new MimetypesFileTypeMap().getContentType(filename);
+//		res.setContentType(type);
+//
+//		// grant access to the resource
+//		// TODO is this the right thing to do?
+//		res.setPublicAccess();
+//
+//		// commit the resource
+//		chs.commitResource(res);
+//		return res.getUrl();
+//	}
 
 	/**
 	 * test version of sendMail
 	 */
 	protected void testSendMail(InternetAddress from, InternetAddress[] to, String subject, String content,
-			HashMap<RecipientType, InternetAddress[]> headerTo, InternetAddress[] replyTo, List<String> additionalHeaders)
+			Map<RecipientType, InternetAddress[]> headerTo, InternetAddress[] replyTo, List<String> additionalHeaders)
 	{
 		M_log.info("sendMail: from: " + from + " to: " + arrayToStr(to) + " subject: " + subject + " headerTo: "
 				+ mapToStr(headerTo) + " replyTo: " + arrayToStr(replyTo) + " content: " + content + " additionalHeaders: "
@@ -939,7 +1086,7 @@ public abstract class BasicEmailService implements EmailService
 	}
 
 	protected void sendMessageAndLog(InternetAddress from, InternetAddress[] to, String subject,
-			HashMap<RecipientType, InternetAddress[]> headerTo, long start, MimeMessage msg)
+			Map<RecipientType, InternetAddress[]> headerTo, long start, MimeMessage msg)
 			throws MessagingException
 	{
 		long preSend = 0;
@@ -996,6 +1143,15 @@ public abstract class BasicEmailService implements EmailService
 					}
 				}
 			}
+			try
+			{
+				if (msg.getContent() instanceof Multipart)
+				{
+					Multipart parts = (Multipart) msg.getContent();
+					buf.append(" with ").append(parts.getCount() - 1).append(" attachments");
+				}
+			}
+			catch (IOException ioe) {}
 
 			if (M_log.isDebugEnabled())
 			{
@@ -1009,7 +1165,7 @@ public abstract class BasicEmailService implements EmailService
 		}
 	}
 
-	protected void setRecipients(HashMap<RecipientType, InternetAddress[]> headerTo, MimeMessage msg)
+	protected void setRecipients(Map<RecipientType, InternetAddress[]> headerTo, MimeMessage msg)
 			throws MessagingException
 	{
 		if (headerTo != null)
@@ -1136,26 +1292,29 @@ public abstract class BasicEmailService implements EmailService
 				{
 					// use the charset from the Content-Type header
 				}
-				else if (canUseCharset(message, "ISO-8859-1"))
+				else if (canUseCharset(message, CharsetConstants.ISO_8859_1))
 				{
-					if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "ISO-8859-1");
-					charset = "ISO-8859-1";
+					if (contentType != null && charset != null)
+						contentType = contentType.replaceAll(charset, CharsetConstants.ISO_8859_1);
+					charset = CharsetConstants.ISO_8859_1;
 				}
-				else if (canUseCharset(message, "windows-1252"))
+				else if (canUseCharset(message, CharsetConstants.WINDOWS_1252))
 				{
-					if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "windows-1252");
-					charset = "windows-1252";
+					if (contentType != null && charset != null)
+						contentType = contentType.replaceAll(charset, CharsetConstants.WINDOWS_1252);
+					charset = CharsetConstants.WINDOWS_1252;
 				}
 				else
 				{
 					// catch-all - UTF-8 should be able to handle anything
 					if (contentType != null && charset != null) 
-						contentType = contentType.replaceAll(charset, "UTF-8");
+						contentType = contentType.replaceAll(charset, CharsetConstants.UTF_8);
 					else if (contentType != null)
-						contentType += "; charset=UTF-8";
+						contentType += "; charset=" + CharsetConstants.UTF_8;
 					else
-						contentType = "Content-Type: text/plain; charset=UTF-8";
-					charset = "UTF-8";
+						contentType = "Content-Type: " + ContentType.TEXT_PLAIN + "; charset="
+								+ CharsetConstants.UTF_8;
+					charset = CharsetConstants.UTF_8;
 				}
 
 				// fill in the body of the message

@@ -12,16 +12,21 @@ import org.sakaiproject.email.api.EmailAddress.RecipientType;
  * Value object for sending emails. Mimics javax.mail.internet.MimeMessage without having a
  * dependency on javax.mail<br>
  * 
- * <p>Sending a message can be done by specifying recipients and/or <em>actual</em> recipients.  If
+ * <p>
+ * Sending a message can be done by specifying recipients and/or <em>actual</em> recipients. If
  * only recipients (to, cc, bcc) are specified, those are the people that will recieve the message
- * and will see each other listed in the to, cc and bcc fields.  If actual recipients are specified,
- * any other recipients will be ignored but will be added to the email headers appropriately.  This
+ * and will see each other listed in the to, cc and bcc fields. If actual recipients are specified,
+ * any other recipients will be ignored but will be added to the email headers appropriately. This
  * allows for mailing to lists and hiding recipients (recipients: mylist@somedomain.edu,
- * actualRecipients: [long list of students].</p>
+ * actualRecipients: [long list of students].
+ * </p>
  * 
- * <p>The default content type for a message is {@link ContentType#TEXT}.
+ * <p>
+ * The default content type for a message is {@link ContentType#TEXT_PLAIN}.  The content type only
+ * applies to the message body.
  * 
- * <p>The default character set for a message is UTF-8.
+ * <p>
+ * The default character set for a message is UTF-8.
  * 
  * @see javax.mail.Transport#send(MimeMessage)
  * @see javax.mail.Transport#send(MimeMessage, Address[])
@@ -48,18 +53,18 @@ public class EmailMessage
 	private String body;
 
 	// attachments to consider for message
-	private Attachments attachments;
+	private List<Attachment> attachments;
 
 	// arbitrary headers for message
-	private HashMap<String, String> headers;
+	private Map<String, String> headers;
 
 	// mime type of message
-	private String contentType = ContentTypes.TEXT;
+	private String contentType = ContentType.TEXT_PLAIN;
 
 	// character set of text in message
-	private String charset;
+	private String charset = "utf-8";
 
-	// format of this message.  common value is "flowed"
+	// format of this message. common value is "flowed"
 	private String format;
 
 	/**
@@ -69,10 +74,9 @@ public class EmailMessage
 	{
 	}
 
-	public EmailMessage(String from, String to, String subject, String body)
+	public EmailMessage(String from, String subject, String body)
 	{
 		setFrom(from);
-		addRecipient(RecipientType.TO, to);
 		setSubject(subject);
 		setBody(body);
 	}
@@ -200,7 +204,7 @@ public class EmailMessage
 		List<EmailAddress> addresses = recipients.get(type);
 		if (addresses == null)
 			addresses = new ArrayList<EmailAddress>();
-		addresses.add(new EmailAddress(name, email));
+		addresses.add(new EmailAddress(email, name));
 		recipients.put(type, addresses);
 	}
 
@@ -318,9 +322,9 @@ public class EmailMessage
 	/**
 	 * Get the attachments on this message
 	 * 
-	 * @return List of {@link Attachments} attached to this message.
+	 * @return List of {@link Attachment} attached to this message.
 	 */
-	public Attachments getAttachments()
+	public List<Attachment> getAttachments()
 	{
 		return attachments;
 	}
@@ -331,30 +335,24 @@ public class EmailMessage
 	 * @param attachment
 	 *            File to attach to this message.
 	 */
-	public void addAttachment(File attachment)
+	public void addAttachment(Attachment attachment)
 	{
 		if (attachment != null)
 		{
 			if (attachments == null)
-				attachments = new Attachments();
-			attachments.addAttachment(attachment);
+				attachments = new ArrayList<Attachment>();
+			attachments.add(attachment);
 		}
 	}
 
 	/**
-	 * Add an attachment to this message.
+	 * Add an attachment to this message. Same as addAttachment(new Attachment(file)).
 	 * 
-	 * @param attachmentUrl
-	 *            The full URL of a resource to be attached. Must fit nicely into a
-	 *            {@link java.io.File}
+	 * @param file
 	 */
-	public void addAttachment(String attachmentUrl)
+	public void addAttachment(File file)
 	{
-		if (attachmentUrl != null)
-		{
-			File f = new File(attachmentUrl);
-			addAttachment(f);
-		}
+		addAttachment(new Attachment(file));
 	}
 
 	/**
@@ -363,7 +361,7 @@ public class EmailMessage
 	 * @param attachments
 	 *            The attachments to set on this message.
 	 */
-	public void setAttachments(Attachments attachments)
+	public void setAttachments(List<Attachment> attachments)
 	{
 		this.attachments = attachments;
 	}
@@ -386,7 +384,8 @@ public class EmailMessage
 	 */
 	public List<String> extractHeaders()
 	{
-		List<String> retval = new ArrayList<String>();;
+		List<String> retval = new ArrayList<String>();
+
 		if (headers != null)
 		{
 			for (String key : headers.keySet())
@@ -402,7 +401,7 @@ public class EmailMessage
 	}
 
 	/**
-	 * Remove a header from this message.  Does nothing if header is not found.
+	 * Remove a header from this message. Does nothing if header is not found.
 	 * 
 	 * @param key
 	 */
@@ -415,7 +414,34 @@ public class EmailMessage
 	/**
 	 * Add a header to this message. If the key is found in the headers of this message, the value
 	 * is appended to the previous value found and separated by a space. A key of null will not be
-	 * added. If value is null, will remove any previous entries of the matching key.
+	 * added. If value is null, previous entries of the matching key will be removed.
+	 * 
+	 * @param key
+	 *            The key of the header.
+	 * @param value
+	 *            The value of the header.
+	 */
+	public void addHeader(String key, String value)
+	{
+		if (headers == null || headers.get(key) == null)
+		{
+			setHeader(key, value);
+		}
+		else if (key != null && value != null)
+		{
+			String prevVal = headers.get(key);
+			prevVal += " " + value;
+			headers.put(key, prevVal);
+		}
+		else if (value == null)
+		{
+			removeHeader(key);
+		}
+	}
+
+	/**
+	 * Sets a header to this message. Any previous value for this key will be replaced. If value is
+	 * null, previous entries of the matching key will be removed.
 	 * 
 	 * @param key
 	 *            The key of the header.
@@ -439,15 +465,36 @@ public class EmailMessage
 	 * @param headers
 	 *            The headers to use on this message.
 	 */
-	public void setHeaders(HashMap<String, String> headers)
+	public void setHeaders(Map<String, String> headers)
 	{
 		this.headers = headers;
 	}
 
 	/**
+	 * Sets headers on this message. The expected format of each header is key: value.
+	 * 
+	 * @param headers
+	 */
+	public void setHeaders(List<String> headers)
+	{
+		if (headers != null)
+		{
+			for (String header : headers)
+			{
+				int splitPoint = header.indexOf(":");
+				String key = header.substring(0, splitPoint);
+				String value = null;
+				if (splitPoint != header.length() - 1)
+					value = header.substring(splitPoint + 1).trim();
+				setHeader(key, value);
+			}
+		}
+	}
+
+	/**
 	 * Get the mime type of this message.
 	 * 
-	 * @return {@link org.sakaiproject.email.api.ContentTypes} of this message.
+	 * @return {@link org.sakaiproject.email.api.ContentType} of this message.
 	 */
 	public String getContentType()
 	{
@@ -459,7 +506,7 @@ public class EmailMessage
 	 * 
 	 * @param mimeType
 	 *            The mime type to use for this message.
-	 * @see org.sakaiproject.email.api.ContentTypes
+	 * @see org.sakaiproject.email.api.ContentType
 	 */
 	public void setContentType(String mimeType)
 	{

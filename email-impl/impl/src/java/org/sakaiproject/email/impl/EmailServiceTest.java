@@ -22,6 +22,7 @@
 package org.sakaiproject.email.impl;
 
 import org.sakaiproject.component.api.ServerConfigurationService;
+//import org.sakaiproject.content.api.ContentHostingService;
 
 /**
  * <p>
@@ -37,4 +38,12 @@ public class EmailServiceTest extends BasicEmailService
 	{
 		return null;
 	}
+
+	/**
+	 * @return the ContentHostingService collaborator.
+	 */
+//	protected ContentHostingService contentHostingService()
+//	{
+//		return null;
+//	}
 }

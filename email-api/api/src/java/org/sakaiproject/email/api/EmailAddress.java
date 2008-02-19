@@ -1,5 +1,10 @@
 package org.sakaiproject.email.api;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.mail.internet.InternetAddress;
+
 /**
  * Value object for email address properties. Mimics javax.mail.internet.InternetAddress without
  * having a dependency on javax.mail.
@@ -50,7 +55,7 @@ public class EmailAddress
 	 * @param address
 	 *            Actual address of email recipient.
 	 */
-	public EmailAddress(String name, String address)
+	public EmailAddress(String address, String name)
 	{
 		this(address);
 		this.personal = name;
@@ -74,5 +79,43 @@ public class EmailAddress
 	public String getAddress()
 	{
 		return address;
+	}
+
+	/**
+	 * Convenience method to bulk convert from {@link javax.mail.internet.InternetAddress} to
+	 * {@link EmailAddress}
+	 * 
+	 * @param iaddrs
+	 * @return
+	 */
+	public static List<EmailAddress> toEmailAddress(InternetAddress[] iaddrs)
+	{
+		ArrayList<EmailAddress> eaddrs = null;
+		if (iaddrs != null)
+		{
+			eaddrs = new ArrayList<EmailAddress>(iaddrs.length);
+			for (InternetAddress iaddr : iaddrs)
+			{
+				eaddrs.add(toEmailAddress(iaddr));
+			}
+		}
+		return eaddrs;
+	}
+
+	/**
+	 * Convenience method to convert from {@link javax.mail.internet.InternetAddress} to
+	 * {@link EmailAddress}
+	 * 
+	 * @param iaddrs
+	 * @return
+	 */
+	public static EmailAddress toEmailAddress(InternetAddress iaddr)
+	{
+		EmailAddress eaddr = null;
+		if (iaddr != null)
+		{
+			eaddr = new EmailAddress(iaddr.getAddress(), iaddr.getPersonal());
+		}
+		return eaddr;
 	}
 }

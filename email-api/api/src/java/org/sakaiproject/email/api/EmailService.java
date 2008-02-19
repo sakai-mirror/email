@@ -22,8 +22,8 @@
 package org.sakaiproject.email.api;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.mail.internet.InternetAddress;
 
@@ -90,8 +90,8 @@ public interface EmailService
 	 * @param charset
 	 */
 	void sendMail(InternetAddress from, InternetAddress[] to, String subject, String content,
-			HashMap<RecipientType, InternetAddress[]> headerTo, InternetAddress[] replyTo,
-			List<String> additionalHeaders, Attachments attachments);
+			Map<RecipientType, InternetAddress[]> headerTo, InternetAddress[] replyTo,
+			List<String> additionalHeaders, List<Attachment> attachments);
 	
 	/**
 	 * Creates and sends a generic text MIME message to the address contained in to.
