@@ -9,5 +9,5 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/component-api"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/email-api"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/test-harness"/>
-	<classpathentry kind="output" path="target/classes"/>
+	<classpathentry kind="output" path="bin"/>
 </classpath>

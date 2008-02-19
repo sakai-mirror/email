@@ -881,9 +881,6 @@ public abstract class BasicEmailService implements EmailService
 	/**
 	 * Sets the content for a message. Also attaches files to the message.
 	 * 
-	 * TODO: Uncomment and test code that will put attachments into CHS and add links to the
-	 * message.
-	 * 
 	 * @param content
 	 * @param attachments
 	 * @param msg
