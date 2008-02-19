@@ -22,11 +22,15 @@
 package org.sakaiproject.email.impl;
 
 import org.sakaiproject.component.api.ServerConfigurationService;
-//import org.sakaiproject.content.api.ContentHostingService;
+
+// import org.sakaiproject.content.api.ContentHostingService;
 
 /**
  * <p>
  * EmailServiceTest extends the basic alias service providing the dependency injectors for testing.
+ * This class is here to ensure that abstract methods not implemented by BasicEmailService are not
+ * overlooked somehow and create problems on server start. BasicEmailService has abstract methods
+ * that are implemented by Spring using lookup-method.
  * </p>
  */
 public class EmailServiceTest extends BasicEmailService
@@ -38,12 +42,4 @@ public class EmailServiceTest extends BasicEmailService
 	{
 		return null;
 	}
-
-	/**
-	 * @return the ContentHostingService collaborator.
-	 */
-//	protected ContentHostingService contentHostingService()
-//	{
-//		return null;
-//	}
 }

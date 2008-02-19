@@ -18,18 +18,6 @@ public class Attachment
 	 */
 	private File file;
 
-	/**
-	 * the collection Id of where to store attachments. If not set, attachments will be embedded on
-	 * message.
-	 */
-//	private String storeLocation;
-
-	/**
-	 * Whether to show a copyright alert for this attachment. Only applies to attachments that are
-	 * stored in content hosting
-	 */
-//	private Properties properties;
-
 	public Attachment(File file)
 	{
 		this.file = file;
@@ -39,19 +27,6 @@ public class Attachment
 	{
 		this.file = new File(filename);
 	}
-
-//	public Attachment(File file, String storeLocation)
-//	{
-//		this.file = file;
-//		this.storeLocation = storeLocation;
-//	}
-
-//	public Attachment(File file, String storeLocation, Properties properties)
-//	{
-//		this.file = file;
-//		this.storeLocation = storeLocation;
-//		this.properties = properties;
-//	}
 
 	/**
 	 * Get the file associated to this attachment
@@ -72,40 +47,6 @@ public class Attachment
 	{
 		this.file = file;
 	}
-
-	/**
-	 * Gets the location where to store attachments. Only used if isEmbedAttachments() == true.
-	 * 
-	 * @return The location to a resource store.
-	 */
-//	public String getStoreLocation()
-//	{
-//		return storeLocation;
-//	}
-
-	/**
-	 * Set the location of where to store attachments. If this is null or unset, attachments will be
-	 * embedded on the message and not placed in a content repository.
-	 * 
-	 * @param storeLocation
-	 */
-//	public void setStoreLocation(String storeLocation)
-//	{
-//		if (storeLocation != null && storeLocation.trim().length() == 0)
-//			this.storeLocation = null;
-//		else
-//			this.storeLocation = storeLocation;
-//	}
-
-//	public Properties getProperties()
-//	{
-//		return properties;
-//	}
-
-//	public void setProperties(Properties properties)
-//	{
-//		this.properties = properties;
-//	}
 
 	public static List<Attachment> toAttachment(List<File> files)
 	{

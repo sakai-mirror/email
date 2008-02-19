@@ -16,10 +16,8 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/event-api"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/db-api"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/util-api"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/util-util"/>
 	<classpathentry kind="var" path="M2_REPO/javax/activation/activation/1.0.2/activation-1.0.2.jar"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/content-api"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/test-harness"/>
 	<classpathentry kind="var" path="M2_REPO/dumbster/dumbster/1.6/dumbster-1.6.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/util-util"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

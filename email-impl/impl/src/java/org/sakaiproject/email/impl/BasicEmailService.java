@@ -893,58 +893,16 @@ public abstract class BasicEmailService implements EmailService
 	protected void setContent(String content, List<Attachment> attachments, MimeMessage msg,
 			String contentType, String charset) throws MessagingException
 	{
-//		LinkedHashMap<Attachment, String> storedAttachments = new LinkedHashMap<Attachment, String>();
 		ArrayList<MimeBodyPart> embeddedAttachments = new ArrayList<MimeBodyPart>();
 		if (attachments != null && attachments.size() > 0)
 		{
 			// Add attachments to messages
 			for (Attachment attachment : attachments)
 			{
-				// if no store location specified, add attachments to message
-//				if (attachment.getStoreLocation() == null)
-//				{
-					// attach the file to the message
-					embeddedAttachments.add(createAttachmentPart(attachment));
-//				}
-//				// use store location to put files into a resource store
-//				else
-//				{
-//					try
-//					{
-//						storedAttachments.put(attachment, storeAttachment(attachment));
-//					}
-//					catch (IdUniquenessException iue) {}
-//					catch (IdLengthException ile) {}
-//					catch (IdInvalidException iie) {}
-//					catch (ServerOverloadException soe) {}
-//					catch (InconsistentException ie) {}
-//					catch (FileNotFoundException fnfe) {}
-//					catch (OverQuotaException oqe) {}
-//					catch (IdUnusedException uune) {}
-//					catch (PermissionException perme) {}
-//				}
+				// attach the file to the message
+				embeddedAttachments.add(createAttachmentPart(attachment));
 			}
 		}
-
-		// if attachments were stored away from the message, update the content to have links
-		// to the storage location
-//		if (!storedAttachments.isEmpty())
-//		{
-//			// set the line break based on content type
-//			String lineBreak = "\n";
-//			if (ContentType.HTML.equals(msg.getContentType()))
-//				lineBreak = "<br />\n";
-//
-//			// update the content to include links to the externally stored attachments
-//			StringBuffer upContent = new StringBuffer(content);
-//			upContent.append(lineBreak).append(lineBreak);
-//			for (Attachment attachment : storedAttachments.keySet())
-//			{
-//				upContent.append(attachment.getFile().getName()).append(lineBreak);
-//				upContent.append(storedAttachments.get(attachment)).append(lineBreak);
-//			}
-//			content = upContent.toString();
-//		}
 
 		// if no direct attachments, keep the message simple and add the content as text.
 		if (embeddedAttachments.size() == 0)
@@ -997,59 +955,7 @@ public abstract class BasicEmailService implements EmailService
 		attachPart.setDataHandler(new DataHandler(source));
 		attachPart.setFileName(attachment.getFile().getName());
 		return attachPart;
-//		multipart.addBodyPart(attachPart);
 	}
-
-	/**
-	 * Stores an attachment in the specified store location.
-	 * 
-	 * TODO: Uncomment and test CHS storage
-	 * 
-	 * @param attachment
-	 * @return The full URL where the attachment is stored.
-	 * @throws IdUniquenessException
-	 * @throws IdLengthException
-	 * @throws IdInvalidException
-	 * @throws ServerOverloadException
-	 * @throws InconsistentException
-	 * @throws FileNotFoundException
-	 * @throws OverQuotaException
-	 * @throws IdUnusedException
-	 * @throws PermissionException
-	 */
-//	private String storeAttachment(Attachment attachment) throws IdUniquenessException,
-//		IdLengthException, IdInvalidException, ServerOverloadException, InconsistentException,
-//		FileNotFoundException, OverQuotaException, IdUnusedException, PermissionException 
-//	{
-//		ContentHostingService chs = contentHostingService();
-//		File file = attachment.getFile();
-//		// set the display name
-//		ResourcePropertiesEdit props = chs.newResourceProperties();
-//		String filename = file.getName();
-//		props.addProperty(ResourceProperties.PROP_DISPLAY_NAME, filename);
-//		props.addAll(attachment.getProperties());
-//
-//		// create the resource
-//		String collectionId = attachment.getStoreLocation();
-//		int lastDot = filename.lastIndexOf('.');
-//		String basename = filename.substring(0, lastDot);
-//		String ext = filename.substring(lastDot);
-//		ContentResourceEdit res = chs.addResource(collectionId, basename, ext,
-//				ContentHostingService.MAXIMUM_ATTEMPTS_FOR_UNIQUENESS);
-//		res.setContent(new FileInputStream(file));
-//
-//		// set the resource/content type
-//		String type = new MimetypesFileTypeMap().getContentType(filename);
-//		res.setContentType(type);
-//
-//		// grant access to the resource
-//		// TODO is this the right thing to do?
-//		res.setPublicAccess();
-//
-//		// commit the resource
-//		chs.commitResource(res);
-//		return res.getUrl();
-//	}
 
 	/**
 	 * test version of sendMail
