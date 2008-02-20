@@ -168,7 +168,7 @@ public class EmailMessage
 	{
 		List<EmailAddress> retval = null;
 		if (recipients != null)
-			recipients.get(type);
+			retval = recipients.get(type);
 		return retval;
 	}
 

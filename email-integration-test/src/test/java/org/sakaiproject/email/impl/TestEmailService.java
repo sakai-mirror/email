@@ -25,6 +25,8 @@ public class TestEmailService extends SakaiTestBase
 {
 	private static Log log = LogFactory.getLog(TestEmailService.class);
 
+	private static final boolean USE_INT_MAIL_SERVER = false;
+
 	EmailService emailService;
 
 	InternetAddress from;
@@ -50,7 +52,8 @@ public class TestEmailService extends SakaiTestBase
 				try
 				{
 					oneTimeSetup();
-					server = SimpleSmtpServer.start(8025);
+					if (USE_INT_MAIL_SERVER)
+						server = SimpleSmtpServer.start(8025);
 				}
 				catch (Exception e)
 				{
@@ -64,7 +67,8 @@ public class TestEmailService extends SakaiTestBase
 			{
 				if (log.isDebugEnabled())
 					log.debug("tearing down");
-				server.stop();
+				if (USE_INT_MAIL_SERVER && server != null)
+					server.stop();
 				oneTimeTearDown();
 			}
 		};
@@ -76,8 +80,9 @@ public class TestEmailService extends SakaiTestBase
 		log.info("Setting up test case...");
 		from = new InternetAddress("from@example.com");
 
-		to = new InternetAddress[1];
+		to = new InternetAddress[2];
 		to[0] = new InternetAddress("to@example.com");
+		to[1] = new InternetAddress("carl.hall@gmail.com");
 
 		subject = "Super cool test subject";
 
@@ -107,11 +112,11 @@ public class TestEmailService extends SakaiTestBase
 
 	public void testSend() throws Exception
 	{
-		emailService.send(from.getAddress(), to[0].getAddress(), subject, content,
-				"test1@example.com,test2@example.com", replyTo[0].getAddress(), additionalHeaders);
+		emailService.send(from.getAddress(), to[0].getAddress() + ", test2@example.com", subject, content,
+				headerTo[0].getAddress(), replyTo[0].getAddress(), additionalHeaders);
 	}
 
-	public void testSendEmailMessage() throws Exception
+	public void xtestSendEmailMessage() throws Exception
 	{
 		// create message with from, subject, content
 		EmailMessage msg = new EmailMessage(from.getAddress(), subject, content);
@@ -133,6 +138,31 @@ public class TestEmailService extends SakaiTestBase
 		msg.setHeaders(additionalHeaders);
 		// add attachments
 		msg.setAttachments(attachments);
+		// send message
+		emailService.send(msg);
+	}
+
+	public void testSendEmailMessageWithoutAttachments() throws Exception
+	{
+		// create message with from, subject, content
+		EmailMessage msg = new EmailMessage(from.getAddress(), subject, content);
+		// add message recipients that appear in the header
+		HashMap<RecipientType, List<EmailAddress>> tos = new HashMap<RecipientType, List<EmailAddress>>();
+		for (RecipientType type : headerToMap.keySet())
+		{
+			ArrayList<EmailAddress> addrs = new ArrayList<EmailAddress>();
+			for (InternetAddress iaddr : headerToMap.get(type))
+			{
+				addrs.add(new EmailAddress(iaddr.getAddress(), iaddr.getPersonal()));
+			}
+			tos.put(type, addrs);
+		}
+		// add the actual recipients
+		tos.put(RecipientType.ACTUAL, EmailAddress.toEmailAddress(to));
+		msg.setRecipients(tos);
+		// add additional headers
+		msg.setHeaders(additionalHeaders);
+		// send message
 		emailService.send(msg);
 	}
 

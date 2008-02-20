@@ -327,7 +327,7 @@ public abstract class BasicEmailService implements EmailService
 
 			// the FULL content-type header, for example:
 			// Content-Type: text/plain; charset=windows-1252; format=flowed
-			String contentType = null;
+			String contentTypeHeader = null;
 
 			// set the additional headers on the message
 			// but treat Content-Type specially as we need to check the charset
@@ -337,7 +337,7 @@ public abstract class BasicEmailService implements EmailService
 				for (String header : additionalHeaders)
 				{
 					if (header.toLowerCase().startsWith(EmailHeaders.CONTENT_TYPE.toLowerCase() + ": "))
-						contentType = header;
+						contentTypeHeader = header;
 					else if (!header.toLowerCase().startsWith(EmailHeaders.MESSAGE_ID.toLowerCase() + ": "))
 						msg.addHeaderLine(header);
 				}
@@ -364,7 +364,7 @@ public abstract class BasicEmailService implements EmailService
 			//
 			// if that charset doesn't work, try a couple others.
 			// the character set, for example, windows-1252 or UTF-8
-			String charset = extractCharset(contentType);
+			String charset = extractCharset(contentTypeHeader);
 
 			if (charset != null && canUseCharset(content, charset))
 			{
@@ -372,44 +372,51 @@ public abstract class BasicEmailService implements EmailService
 			}
 			else if (canUseCharset(content, CharsetConstants.ISO_8859_1))
 			{
-				if (contentType != null && charset != null)
-					contentType = contentType.replaceAll(charset, CharsetConstants.ISO_8859_1);
+				if (contentTypeHeader != null && charset != null)
+					contentTypeHeader = contentTypeHeader.replaceAll(charset, CharsetConstants.ISO_8859_1);
 				charset = CharsetConstants.ISO_8859_1;
 			}
 			else if (canUseCharset(content, CharsetConstants.WINDOWS_1252))
 			{
-				if (contentType != null && charset != null)
-					contentType = contentType.replaceAll(charset, CharsetConstants.WINDOWS_1252);
+				if (contentTypeHeader != null && charset != null)
+					contentTypeHeader = contentTypeHeader.replaceAll(charset, CharsetConstants.WINDOWS_1252);
 				charset = CharsetConstants.ISO_8859_1;
 			}
 			else
 			{
 				// catch-all - UTF-8 should be able to handle anything
-				if (contentType != null && charset != null) 
-					contentType = contentType.replaceAll(charset, CharsetConstants.UTF_8);
-				else if (contentType != null)
-					contentType += "; charset=" + CharsetConstants.UTF_8;
+				if (contentTypeHeader != null && charset != null) 
+					contentTypeHeader = contentTypeHeader.replaceAll(charset, CharsetConstants.UTF_8);
+				else if (contentTypeHeader != null)
+					contentTypeHeader += "; charset=" + CharsetConstants.UTF_8;
 				charset = CharsetConstants.UTF_8;
 			}
 
 			if ((subject != null) && (msg.getHeader(EmailHeaders.SUBJECT) == null))
 				msg.setSubject(subject, charset);
 
+			// extract just the content type value from the header
+			String contentType = null;
+			if (contentTypeHeader != null)
+			{
+				int colonPos = contentTypeHeader.indexOf(":");
+				contentType = contentTypeHeader.substring(colonPos + 1).trim();
+			}
 			setContent(content, attachments, msg, contentType, charset);
 
 			// if we have a full Content-Type header, set it NOW
 			// (after setting the body of the message so that format=flowed is preserved)
-			if (contentType != null)
+			if (contentTypeHeader != null)
 			{
 				msg.addHeaderLine(EmailHeaders.CONTENT_TRANSFER_ENCODING + ": quoted-printable");
-				msg.addHeaderLine(contentType);
+				msg.addHeaderLine(contentTypeHeader);
 			}
 
 			sendMessageAndLog(from, to, subject, headerTo, start, msg);
 		}
 		catch (MessagingException e)
 		{
-			M_log.warn("Email.sendMail: exception: " + e, e);
+			M_log.warn("Email.sendMail: exception: " + e.getMessage(), e);
 		}
 	}
 
@@ -733,11 +740,11 @@ public abstract class BasicEmailService implements EmailService
 		}
 		catch (AddressException ae)
 		{
-			
+			M_log.warn("Email.send: exception: " + ae.getMessage(), ae);
 		}
 		catch (UnsupportedEncodingException uee)
 		{
-			
+			M_log.warn("Email.send: exception: " + uee.getMessage(), uee);
 		}
 	}
 
@@ -756,6 +763,16 @@ public abstract class BasicEmailService implements EmailService
 		return retval;
 	}
 
+	/**
+	 * Converts a {@link java.util.List} of {@link EmailAddress} to
+	 * {@link javax.mail.internet.InternetAddress}.
+	 * 
+	 * @param emails
+	 * @return If list is null, response is a null array. Otherwise, array will be the same size as
+	 *         the list.
+	 * @throws AddressException
+	 * @throws UnsupportedEncodingException
+	 */
 	protected InternetAddress[] emails2Internets(List<EmailAddress> emails)
 			throws AddressException, UnsupportedEncodingException
 	{
@@ -1161,7 +1178,7 @@ public abstract class BasicEmailService implements EmailService
 							}
 							catch (MessagingException e)
 							{
-								M_log.warn("Email.MyMessage: exception: " + e, e);
+								M_log.warn("Email.MyMessage: exception: " + e.getMessage(), e);
 							}
 						}
 					}
@@ -1236,7 +1253,7 @@ public abstract class BasicEmailService implements EmailService
 			}
 			catch (MessagingException e)
 			{
-				M_log.warn("Email.MyMessage: exception: " + e, e);
+				M_log.warn("Email.MyMessage: exception: " + e.getMessage(), e);
 			}
 		}
 
