@@ -768,8 +768,8 @@ public abstract class BasicEmailService implements EmailService
 	 * {@link javax.mail.internet.InternetAddress}.
 	 * 
 	 * @param emails
-	 * @return If list is null, response is a null array. Otherwise, array will be the same size as
-	 *         the list.
+	 * @return Array will be the same size as the list with converted addresses. If list is null,
+	 *         the array returned will be 0 length (non-null).
 	 * @throws AddressException
 	 * @throws UnsupportedEncodingException
 	 */
