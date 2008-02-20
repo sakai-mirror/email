@@ -1,9 +1,13 @@
 package org.sakaiproject.email.impl;
 
 import com.dumbster.smtp.SimpleSmtpServer;
+import com.dumbster.smtp.SmtpMessage;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.mail.internet.InternetAddress;
@@ -25,8 +29,11 @@ public class TestEmailService extends SakaiTestBase
 {
 	private static Log log = LogFactory.getLog(TestEmailService.class);
 
-	private static final boolean USE_INT_MAIL_SERVER = false;
+	private static final boolean USE_INT_MAIL_SERVER = true;
+	private static final boolean LOG_SENT_EMAIL = true;
 
+	static SimpleSmtpServer server;
+	
 	EmailService emailService;
 
 	InternetAddress from;
@@ -43,8 +50,6 @@ public class TestEmailService extends SakaiTestBase
 	{
 		TestSetup setup = new TestSetup(new TestSuite(TestEmailService.class))
 		{
-			SimpleSmtpServer server = null;
-
 			protected void setUp() throws Exception
 			{
 				if (log.isDebugEnabled())
@@ -52,8 +57,6 @@ public class TestEmailService extends SakaiTestBase
 				try
 				{
 					oneTimeSetup();
-					if (USE_INT_MAIL_SERVER)
-						server = SimpleSmtpServer.start(8025);
 				}
 				catch (Exception e)
 				{
@@ -67,8 +70,6 @@ public class TestEmailService extends SakaiTestBase
 			{
 				if (log.isDebugEnabled())
 					log.debug("tearing down");
-				if (USE_INT_MAIL_SERVER && server != null)
-					server.stop();
 				oneTimeTearDown();
 			}
 		};
@@ -82,7 +83,7 @@ public class TestEmailService extends SakaiTestBase
 
 		to = new InternetAddress[2];
 		to[0] = new InternetAddress("to@example.com");
-		to[1] = new InternetAddress("carl.hall@gmail.com");
+		to[1] = new InternetAddress("too@example.com");
 
 		subject = "Super cool test subject";
 
@@ -104,22 +105,76 @@ public class TestEmailService extends SakaiTestBase
 		additionalHeaders.add("x-testmessage-rocks: super-awesome");
 
 		attachments = new ArrayList<Attachment>();
-		attachments.add(new Attachment("/home/chall39/velocity.log"));
-		attachments.add(new Attachment("/home/chall39/quotes.txt"));
+		File f1 = File.createTempFile("testFile1", ".txt");
+		f1.deleteOnExit();
+		FileWriter fw1 = new FileWriter(f1);
+		fw1.write("This is some really killer test text for the first attachment.");
+		fw1.flush();
+		fw1.close();
+		File f2 = File.createTempFile("testFile2", ".csv");
+		f2.deleteOnExit();
+		FileWriter fw2 = new FileWriter(f2);
+		fw2.write("this,is,some,comma,delimited\ntext,in,a,message,body");
+		fw2.flush();
+		fw2.close();
+		attachments.add(new Attachment(f1));
+		attachments.add(new Attachment(f2));
 
 		emailService = (EmailService) getService(EmailService.class.getName());
+
+		if (USE_INT_MAIL_SERVER)
+			server = SimpleSmtpServer.start(8025);
+	}
+
+	public void tearDown() throws Exception
+	{
+		if (LOG_SENT_EMAIL)
+		{
+			for (Iterator<SmtpMessage> emails = server.getReceivedEmail(); emails.hasNext(); )
+			{
+				SmtpMessage email = emails.next();
+				log.info(email);
+			}
+		}
+		if (server != null && !server.isStopped())
+			server.stop();
 	}
 
 	public void testSend() throws Exception
 	{
-		emailService.send(from.getAddress(), to[0].getAddress() + ", test2@example.com", subject, content,
-				headerTo[0].getAddress(), replyTo[0].getAddress(), additionalHeaders);
+		emailService.send(from.getAddress(), to[0].getAddress() + ", test2@example.com", subject,
+				content, headerTo[0].getAddress(), replyTo[0].getAddress(), additionalHeaders);
 	}
 
-	public void xtestSendEmailMessage() throws Exception
+	public void testSendMessageWithoutAttachments() throws Exception
 	{
 		// create message with from, subject, content
 		EmailMessage msg = new EmailMessage(from.getAddress(), subject, content);
+		// add message recipients that appear in the header
+		HashMap<RecipientType, List<EmailAddress>> tos = new HashMap<RecipientType, List<EmailAddress>>();
+		for (RecipientType type : headerToMap.keySet())
+		{
+			ArrayList<EmailAddress> addrs = new ArrayList<EmailAddress>();
+			for (InternetAddress iaddr : headerToMap.get(type))
+			{
+				addrs.add(new EmailAddress(iaddr.getAddress(), iaddr.getPersonal()));
+			}
+			tos.put(type, addrs);
+		}
+		// add the actual recipients
+		tos.put(RecipientType.ACTUAL, EmailAddress.toEmailAddress(to));
+		msg.setRecipients(tos);
+		// add additional headers
+		msg.setHeaders(additionalHeaders);
+		// send message
+		emailService.send(msg);
+	}
+
+	public void testSendEmailMessage() throws Exception
+	{
+		// create message with from, subject, content
+		EmailMessage msg = new EmailMessage(from.getAddress(), subject + " with attachments",
+				content);
 		// add message recipients that appear in the header
 		HashMap<RecipientType, List<EmailAddress>> tos = new HashMap<RecipientType, List<EmailAddress>>();
 		for (RecipientType type : headerToMap.keySet())
@@ -138,30 +193,6 @@ public class TestEmailService extends SakaiTestBase
 		msg.setHeaders(additionalHeaders);
 		// add attachments
 		msg.setAttachments(attachments);
-		// send message
-		emailService.send(msg);
-	}
-
-	public void testSendEmailMessageWithoutAttachments() throws Exception
-	{
-		// create message with from, subject, content
-		EmailMessage msg = new EmailMessage(from.getAddress(), subject, content);
-		// add message recipients that appear in the header
-		HashMap<RecipientType, List<EmailAddress>> tos = new HashMap<RecipientType, List<EmailAddress>>();
-		for (RecipientType type : headerToMap.keySet())
-		{
-			ArrayList<EmailAddress> addrs = new ArrayList<EmailAddress>();
-			for (InternetAddress iaddr : headerToMap.get(type))
-			{
-				addrs.add(new EmailAddress(iaddr.getAddress(), iaddr.getPersonal()));
-			}
-			tos.put(type, addrs);
-		}
-		// add the actual recipients
-		tos.put(RecipientType.ACTUAL, EmailAddress.toEmailAddress(to));
-		msg.setRecipients(tos);
-		// add additional headers
-		msg.setHeaders(additionalHeaders);
 		// send message
 		emailService.send(msg);
 	}
