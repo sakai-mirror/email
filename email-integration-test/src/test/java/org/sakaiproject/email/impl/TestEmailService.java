@@ -128,16 +128,18 @@ public class TestEmailService extends SakaiTestBase
 
 	public void tearDown() throws Exception
 	{
-		if (LOG_SENT_EMAIL)
-		{
-			for (Iterator<SmtpMessage> emails = server.getReceivedEmail(); emails.hasNext(); )
-			{
-				SmtpMessage email = emails.next();
-				log.info(email);
-			}
-		}
 		if (server != null && !server.isStopped())
+		{
+			if (LOG_SENT_EMAIL)
+			{
+				for (Iterator<SmtpMessage> emails = server.getReceivedEmail(); emails.hasNext(); )
+				{
+					SmtpMessage email = emails.next();
+					log.info(email);
+				}
+			}
 			server.stop();
+		}
 	}
 
 	public void testSend() throws Exception
