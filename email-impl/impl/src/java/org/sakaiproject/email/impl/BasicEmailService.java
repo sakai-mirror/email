@@ -366,12 +366,22 @@ public abstract class BasicEmailService implements EmailService
 			}
 			else if (canUseCharset(content, "ISO-8859-1"))
 			{
-				if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "ISO-8859-1");
+				if (contentType != null && charset != null) 
+					contentType = contentType.replaceAll(charset, "ISO-8859-1");
+				else if(contentType != null) 
+					contentType += "; charset=ISO-8859-1";
+				else 
+					contentType = "charset=ISO-8859-1";
 				charset = "ISO-8859-1";
 			}
 			else if (canUseCharset(content, "windows-1252"))
 			{
-				if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "windows-1252");
+				if (contentType != null && charset != null) 
+					contentType = contentType.replaceAll(charset, "windows-1252");
+				else if(contentType != null) 
+					contentType += "; charset=windows-1252";
+				else 
+					contentType = "charset=windows-1252";
 				charset = "windows-1252";
 			}
 			else
@@ -894,11 +904,15 @@ public abstract class BasicEmailService implements EmailService
 				else if (canUseCharset(message, "ISO-8859-1"))
 				{
 					if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "ISO-8859-1");
+					else if(contentType != null) contentType += "; charset=ISO-8859-1";
+					else contentType = "charset=ISO-8859-1";
 					charset = "ISO-8859-1";
 				}
 				else if (canUseCharset(message, "windows-1252"))
 				{
 					if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "windows-1252");
+					else if(contentType != null) contentType += "; charset=windows-1252";
+					else contentType = "charset=windows-1252";
 					charset = "windows-1252";
 				}
 				else
@@ -928,6 +942,7 @@ public abstract class BasicEmailService implements EmailService
 						}
 						MimeBodyPart bodyPart = new MimeBodyPart();
 						String mimeType = partLines[0].contains("text/html") ? "text/html" : "text/plain";
+						mimeType += " ; charset="+charset;
 						bodyPart.setContent(partText.toString(), mimeType);
 						multiPartContent.addBodyPart(bodyPart);
 					}
