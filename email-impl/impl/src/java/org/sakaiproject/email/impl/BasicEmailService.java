@@ -370,8 +370,6 @@ public abstract class BasicEmailService implements EmailService
 					contentType = contentType.replaceAll(charset, "ISO-8859-1");
 				else if(contentType != null) 
 					contentType += "; charset=ISO-8859-1";
-				else 
-					contentType = "charset=ISO-8859-1";
 				charset = "ISO-8859-1";
 			}
 			else if (canUseCharset(content, "windows-1252"))
@@ -380,8 +378,6 @@ public abstract class BasicEmailService implements EmailService
 					contentType = contentType.replaceAll(charset, "windows-1252");
 				else if(contentType != null) 
 					contentType += "; charset=windows-1252";
-				else 
-					contentType = "charset=windows-1252";
 				charset = "windows-1252";
 			}
 			else
@@ -406,8 +402,8 @@ public abstract class BasicEmailService implements EmailService
 			// (after setting the body of the message so that format=flowed is preserved)
 			if (contentType != null)
 			{
-				msg.addHeaderLine("Content-Transfer-Encoding: quoted-printable");
 				msg.addHeaderLine(contentType);
+				msg.addHeaderLine("Content-Transfer-Encoding: quoted-printable");
 			}
 
 			long preSend = 0;
@@ -905,14 +901,12 @@ public abstract class BasicEmailService implements EmailService
 				{
 					if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "ISO-8859-1");
 					else if(contentType != null) contentType += "; charset=ISO-8859-1";
-					else contentType = "charset=ISO-8859-1";
 					charset = "ISO-8859-1";
 				}
 				else if (canUseCharset(message, "windows-1252"))
 				{
 					if (contentType != null && charset != null) contentType = contentType.replaceAll(charset, "windows-1252");
 					else if(contentType != null) contentType += "; charset=windows-1252";
-					else contentType = "charset=windows-1252";
 					charset = "windows-1252";
 				}
 				else
@@ -922,8 +916,6 @@ public abstract class BasicEmailService implements EmailService
 						contentType = contentType.replaceAll(charset, "UTF-8");
 					else if (contentType != null)
 						contentType += "; charset=UTF-8";
-					else
-						contentType = "Content-Type: text/plain; charset=UTF-8";
 					charset = "UTF-8";
 				}
 				
