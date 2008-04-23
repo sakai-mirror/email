@@ -76,6 +76,11 @@ public abstract class BasicEmailService implements EmailService
 	 * an invalid recipient address.
 	 */
 	protected static final String SMTP_SENDPARTIAL = "mail.smtp.sendpartial";
+	
+	/**
+	 * Hostname used in outgoing SMTP HELO commands.
+	 */
+	protected static final String SMTP_LOCALHOST = "mail.smtp.localhost";
 
 	protected static final String CONTENT_TYPE = "text/plain";
 
@@ -181,6 +186,21 @@ public abstract class BasicEmailService implements EmailService
 	{
 		m_oneMessagePerConnection = value;
 	}
+	
+	/** Hostname to use for SMTP HELO commands */
+	protected String m_smtpLocalhost = null;
+	
+	/**
+	 * Hostname to use for SMTP HELO commands.
+	 * RFC1123 section 5.2.5 and RFC2821 section 4.1.1.1
+	 * 
+	 *  @param value
+	 *  		The hostname (eg foo.example.com)
+	 */
+	public void setSmtpLocalhost(String value)
+	{
+		m_smtpLocalhost = value;
+	}
 
 	/**********************************************************************************************************************************************************************************************************************************************************
 	 * Init and Destroy
@@ -268,6 +288,12 @@ public abstract class BasicEmailService implements EmailService
 		if (m_smtpPort != null)
 		{
 			props.put(SMTP_PORT, m_smtpPort);
+		}
+		
+		// Set localhost name
+		if (m_smtpLocalhost != null)
+		{
+			props.put(SMTP_LOCALHOST, m_smtpLocalhost);
 		}
 
 		// set the mail envelope return address
