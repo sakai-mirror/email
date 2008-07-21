@@ -13,16 +13,16 @@ import org.sakaiproject.email.api.EmailAddress.RecipientType;
  * dependency on javax.mail<br>
  * 
  * <p>
- * Sending a message can be done by specifying recipients and/or <em>actual</em> recipients. If
- * only recipients (to, cc, bcc) are specified, those are the people that will recieve the message
- * and will see each other listed in the to, cc and bcc fields. If actual recipients are specified,
- * any other recipients will be ignored but will be added to the email headers appropriately. This
+ * Sending a message can be done by specifying recipients and/or <em>actual</em> recipients. If only
+ * recipients (to, cc, bcc) are specified, those are the people that will recieve the message and
+ * will see each other listed in the to, cc and bcc fields. If actual recipients are specified, any
+ * other recipients will be ignored but will be added to the email headers appropriately. This
  * allows for mailing to lists and hiding recipients (recipients: mylist@somedomain.edu,
  * actualRecipients: [long list of students].
  * </p>
  * 
  * <p>
- * The default content type for a message is {@link ContentType#TEXT_PLAIN}.  The content type only
+ * The default content type for a message is {@link ContentType#TEXT_PLAIN}. The content type only
  * applies to the message body.
  * 
  * <p>
@@ -35,36 +35,57 @@ import org.sakaiproject.email.api.EmailAddress.RecipientType;
 public class EmailMessage
 {
 	/**
-	 * Type safe constant for message mime types
+	 * Who this message is from
 	 */
-	// who this message is from
 	private EmailAddress from;
 
-	// addressee for replies
+	/**
+	 * Addressee(s) for replies
+	 */
 	private List<EmailAddress> replyTo;
 
-	// recipients of message
+	/**
+	 * Recipients of message
+	 */
 	private Map<RecipientType, List<EmailAddress>> recipients;
 
-	// subject of message
+	/**
+	 * Subject of message
+	 */
 	private String subject;
 
-	// body content of message
+	/**
+	 * Body content of message
+	 */
 	private String body;
 
-	// attachments to consider for message
+	/**
+	 * Attachments to consider for message
+	 */
 	private List<Attachment> attachments;
 
-	// arbitrary headers for message
+	/**
+	 * Arbitrary headers for message
+	 */
 	private Map<String, String> headers;
 
-	// mime type of message
+	/**
+	 * Mime type of message. Defaults to text/plain.
+	 * 
+	 * @see org.sakaiproject.email.apit.ContentType
+	 */
 	private String contentType = ContentType.TEXT_PLAIN;
 
-	// character set of text in message
+	/**
+	 * Character set of text in message
+	 */
 	private String charset = "utf-8";
 
-	// format of this message. common value is "flowed"
+	/**
+	 * Format of this message if in plain text.
+	 * 
+	 * @see org.sakaiproject.email.api.PlainTextFormat
+	 */
 	private String format;
 
 	/**
@@ -535,6 +556,11 @@ public class EmailMessage
 		this.charset = charset;
 	}
 
+	/**
+	 * Gets the format of this message.
+	 * 
+	 * @return
+	 */
 	public String getFormat()
 	{
 		return format;
