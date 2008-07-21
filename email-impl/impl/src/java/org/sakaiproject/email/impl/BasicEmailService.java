@@ -53,7 +53,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.email.api.Attachment;
-import org.sakaiproject.email.api.CharsetConstants;
+import org.sakaiproject.email.api.CharacterSet;
 import org.sakaiproject.email.api.ContentType;
 import org.sakaiproject.email.api.EmailAddress;
 import org.sakaiproject.email.api.EmailHeaders;
@@ -91,7 +91,7 @@ public abstract class BasicEmailService implements EmailService
 	 */
 	protected static final String SMTP_SENDPARTIAL = "mail.smtp.sendpartial";
 
-	protected static final String CONTENT_TYPE = "text/plain";
+	protected static final String CONTENT_TYPE = ContentType.TEXT_PLAIN;
 
 	/** Protocol name for smtp. */
 	protected static final String SMTP_PROTOCOL = "smtp";
@@ -370,26 +370,26 @@ public abstract class BasicEmailService implements EmailService
 			{
 				// use the charset from the Content-Type header
 			}
-			else if (canUseCharset(content, CharsetConstants.ISO_8859_1))
+			else if (canUseCharset(content, CharacterSet.ISO_8859_1))
 			{
 				if (contentTypeHeader != null && charset != null)
-					contentTypeHeader = contentTypeHeader.replaceAll(charset, CharsetConstants.ISO_8859_1);
-				charset = CharsetConstants.ISO_8859_1;
+					contentTypeHeader = contentTypeHeader.replaceAll(charset, CharacterSet.ISO_8859_1);
+				charset = CharacterSet.ISO_8859_1;
 			}
-			else if (canUseCharset(content, CharsetConstants.WINDOWS_1252))
+			else if (canUseCharset(content, CharacterSet.WINDOWS_1252))
 			{
 				if (contentTypeHeader != null && charset != null)
-					contentTypeHeader = contentTypeHeader.replaceAll(charset, CharsetConstants.WINDOWS_1252);
-				charset = CharsetConstants.ISO_8859_1;
+					contentTypeHeader = contentTypeHeader.replaceAll(charset, CharacterSet.WINDOWS_1252);
+				charset = CharacterSet.ISO_8859_1;
 			}
 			else
 			{
 				// catch-all - UTF-8 should be able to handle anything
 				if (contentTypeHeader != null && charset != null) 
-					contentTypeHeader = contentTypeHeader.replaceAll(charset, CharsetConstants.UTF_8);
+					contentTypeHeader = contentTypeHeader.replaceAll(charset, CharacterSet.UTF_8);
 				else if (contentTypeHeader != null)
-					contentTypeHeader += "; charset=" + CharsetConstants.UTF_8;
-				charset = CharsetConstants.UTF_8;
+					contentTypeHeader += "; charset=" + CharacterSet.UTF_8;
+				charset = CharacterSet.UTF_8;
 			}
 
 			if ((subject != null) && (msg.getHeader(EmailHeaders.SUBJECT) == null))
@@ -727,9 +727,11 @@ public abstract class BasicEmailService implements EmailService
 
 			// build the content type
 			String contentType = EmailHeaders.CONTENT_TYPE + ": " + msg.getContentType();
-			if (msg.getCharset() != null && msg.getCharset().trim().length() != 0)
-				contentType += "; charset=" + msg.getCharset();
-			if (msg.getFormat() != null && msg.getFormat().trim().length() != 0)
+			if (msg.getCharacterSet() != null && msg.getCharacterSet().trim().length() != 0)
+				contentType += "; charset=" + msg.getCharacterSet();
+			// message format is only used when content type is text/plain as specified in the rfc
+			if (ContentType.TEXT_PLAIN.equals(msg.getCharacterSet()) && msg.getFormat() != null
+					&& msg.getFormat().trim().length() != 0)
 				contentType += "; format=" + msg.getFormat();
 			// add the content type to the headers
 			headers.add(contentType);
@@ -1212,29 +1214,29 @@ public abstract class BasicEmailService implements EmailService
 				{
 					// use the charset from the Content-Type header
 				}
-				else if (canUseCharset(message, CharsetConstants.ISO_8859_1))
+				else if (canUseCharset(message, CharacterSet.ISO_8859_1))
 				{
 					if (contentType != null && charset != null)
-						contentType = contentType.replaceAll(charset, CharsetConstants.ISO_8859_1);
-					charset = CharsetConstants.ISO_8859_1;
+						contentType = contentType.replaceAll(charset, CharacterSet.ISO_8859_1);
+					charset = CharacterSet.ISO_8859_1;
 				}
-				else if (canUseCharset(message, CharsetConstants.WINDOWS_1252))
+				else if (canUseCharset(message, CharacterSet.WINDOWS_1252))
 				{
 					if (contentType != null && charset != null)
-						contentType = contentType.replaceAll(charset, CharsetConstants.WINDOWS_1252);
-					charset = CharsetConstants.WINDOWS_1252;
+						contentType = contentType.replaceAll(charset, CharacterSet.WINDOWS_1252);
+					charset = CharacterSet.WINDOWS_1252;
 				}
 				else
 				{
 					// catch-all - UTF-8 should be able to handle anything
 					if (contentType != null && charset != null) 
-						contentType = contentType.replaceAll(charset, CharsetConstants.UTF_8);
+						contentType = contentType.replaceAll(charset, CharacterSet.UTF_8);
 					else if (contentType != null)
-						contentType += "; charset=" + CharsetConstants.UTF_8;
+						contentType += "; charset=" + CharacterSet.UTF_8;
 					else
 						contentType = "Content-Type: " + ContentType.TEXT_PLAIN + "; charset="
-								+ CharsetConstants.UTF_8;
-					charset = CharsetConstants.UTF_8;
+								+ CharacterSet.UTF_8;
+					charset = CharacterSet.UTF_8;
 				}
 
 				// fill in the body of the message

@@ -8,8 +8,6 @@ package org.sakaiproject.email.api;
  * this.<br>
  * TEXT_HTML - for html formatted text
  * </p>
- * 
- * @author <a href="mailto:carl.hall@et.gatech.edu">Carl Hall</a>
  */
 public interface ContentType
 {

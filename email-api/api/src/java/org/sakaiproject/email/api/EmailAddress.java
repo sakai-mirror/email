@@ -6,8 +6,8 @@ import java.util.List;
 import javax.mail.internet.InternetAddress;
 
 /**
- * Value object for email address properties. Mimics javax.mail.internet.InternetAddress without
- * having a dependency on javax.mail.
+ * Value object for email address properties.  Mimics javax.mail.internet.InternetAddress requiring
+ * a dependency on javax.mail by client code.
  */
 public class EmailAddress
 {

@@ -64,7 +64,7 @@ public interface EmailService
 	 * </p>
 	 * 
 	 * <p>
-	 * Some character set constants are available in {@link CharsetConstants}<br>
+	 * Some character set constants are available in {@link CharacterSet}<br>
 	 * The content type should be of the format "text/plain; charset=windows-1252; format=flowed"
 	 * </p>
 	 * 
@@ -130,7 +130,8 @@ public interface EmailService
 	 * Sends a single message to a set of users.
 	 * 
 	 * @param message
-	 *        {@link EmailMessage} that contains the parameters to create a message to the specified recipients.
+	 *            {@link EmailMessage} that contains the parameters to create a message to the
+	 *            specified recipients.
 	 */
 	void send(EmailMessage message);
 }

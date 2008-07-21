@@ -24,9 +24,10 @@ import org.sakaiproject.email.api.EmailAddress.RecipientType;
  * <p>
  * The default content type for a message is {@link ContentType#TEXT_PLAIN}. The content type only
  * applies to the message body.
- * 
+ * </p>
  * <p>
  * The default character set for a message is UTF-8.
+ * </p>
  * 
  * @see javax.mail.Transport#send(MimeMessage)
  * @see javax.mail.Transport#send(MimeMessage, Address[])
@@ -72,14 +73,16 @@ public class EmailMessage
 	/**
 	 * Mime type of message. Defaults to text/plain.
 	 * 
-	 * @see org.sakaiproject.email.apit.ContentType
+	 * @see org.sakaiproject.email.api.ContentType
 	 */
 	private String contentType = ContentType.TEXT_PLAIN;
 
 	/**
 	 * Character set of text in message
+	 * 
+	 * @see org.sakaiproject.email.api.CharacterSet
 	 */
-	private String charset = "utf-8";
+	private String characterSet = CharacterSet.UTF_8;
 
 	/**
 	 * Format of this message if in plain text.
@@ -539,21 +542,21 @@ public class EmailMessage
 	 * 
 	 * @return The character set used for this message.
 	 */
-	public String getCharset()
+	public String getCharacterSet()
 	{
-		return charset;
+		return characterSet;
 	}
 
 	/**
 	 * Set the character set for text in this message.
 	 * 
-	 * @param charset
+	 * @param characterSet
 	 *            The character set used to render text in this message.
-	 * @see org.sakaproject.email.api.CharsetConstants
+	 * @see org.sakaproject.email.api.CharacterSet
 	 */
-	public void setCharset(String charset)
+	public void setCharacterSet(String characterSet)
 	{
-		this.charset = charset;
+		this.characterSet = characterSet;
 	}
 
 	/**
@@ -566,6 +569,13 @@ public class EmailMessage
 		return format;
 	}
 
+	/**
+	 * Set the format of this message if content type is text/plain
+	 * 
+	 * @param format
+	 * @see org.sakaiproject.email.api.PlainTextFormat
+	 * @see org.sakaiproject.email.api.ContentType
+	 */
 	public void setFormat(String format)
 	{
 		this.format = format;
