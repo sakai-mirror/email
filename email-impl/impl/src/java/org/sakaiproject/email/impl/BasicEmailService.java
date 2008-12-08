@@ -21,6 +21,9 @@
 
 package org.sakaiproject.email.impl;
 
+import java.io.UnsupportedEncodingException;
+import javax.mail.internet.MimeUtility;
+
 import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.Date;
@@ -854,6 +857,18 @@ public abstract class BasicEmailService implements EmailService
 						{
 							contentType = header;
 						}
+						else if (header.toLowerCase().startsWith("from: ")) 
+						{
+							addEncodedHeader(header, "From: ");
+						}
+						else if (header.toLowerCase().startsWith("to: "))
+						{
+							addEncodedHeader(header, "To: ");
+						}
+						else if (header.toLowerCase().startsWith("cc: ")) 
+						{
+							addEncodedHeader(header, "Cc: ");
+						}
 
 						else
 						{
@@ -969,5 +984,51 @@ public abstract class BasicEmailService implements EmailService
 				setHeader("Message-Id", m_id);
 			}
 		}
+      
+		/** Encode (To,From,Cc) mail headers to safely include UTF-8 characters
+		 **/
+		private void addEncodedHeader(String header, String name) throws MessagingException 
+		{
+			 try 
+			 {
+				  final String value = header.substring(name.length());
+				  
+				  // check for header format that may include UTF-8 characters
+				  int index = value.lastIndexOf("<");
+				  if (index == -1) 
+				  {
+						addHeaderLine(header);
+				  } 
+				  
+				  // UTF-8 characters may exists -- encode header string
+				  else 
+				  {
+						if ((index != 0) && (' ' == value.charAt(index - 1))) 
+						{
+							 index--;
+						}
+						
+						final String title = value.substring(0, index);
+						final String email = value.substring(index);
+						
+						final String[] lines = 
+							(name + MimeUtility.encodeText(title, "UTF-8", null).replace(" ", "\n ") + email).split("\r\n|\r|\n");
+						for (String temp: lines) 
+						{
+							 addHeaderLine(temp);
+						}
+				  }
+			 } 
+			 catch (MessagingException e) 
+			 {
+				  M_log.warn("Email.MyMessage: exception: " + e, e);
+				  addHeaderLine(header);
+			 } 
+			 catch (UnsupportedEncodingException e)
+			 {
+				  M_log.warn("Email.MyMessage: exception: " + e, e);
+				  addHeaderLine(header);
+			 }
+		} 
 	}
 }
